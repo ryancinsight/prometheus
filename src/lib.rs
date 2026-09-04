@@ -37,4 +37,6 @@ pub use rate::{
 };
 pub use species::{MolarMass, NonPositiveMolarMass, Species};
 #[cfg(feature = "std")]
-pub use stoichiometry::{InvalidStoichiometry, MisshapedMasses, StoichiometricMatrix};
+pub use stoichiometry::{
+    InvalidStoichiometry, MisshapedMasses, MisshapedRates, StoichiometricMatrix,
+};

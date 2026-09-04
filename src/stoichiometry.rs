@@ -8,6 +8,7 @@
 
 use alloc::vec::Vec;
 
+use aequitas::systems::si::quantities::ReactionRate;
 use eunomia::RealField;
 use leto::{CooArray, SparseStorage, SparseStorageMut};
 
@@ -47,6 +48,16 @@ pub struct MisshapedMasses {
     /// Species count implied by the matrix.
     pub n_species: usize,
     /// Length of the molar-mass slice supplied by the caller.
+    pub supplied: usize,
+}
+
+/// A net-production call received a rate vector whose length does not match
+/// the matrix's reaction dimension.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct MisshapedRates {
+    /// Reaction count implied by the matrix.
+    pub n_reactions: usize,
+    /// Length of the reaction-rate slice supplied by the caller.
     pub supplied: usize,
 }
 
@@ -151,5 +162,35 @@ impl<T: RealField> StoichiometricMatrix<T> {
     ) -> Result<bool, MisshapedMasses> {
         let residuals = self.mass_residuals(molar_masses)?;
         Ok(residuals.iter().all(|residual| residual.abs() <= tolerance))
+    }
+
+    /// Net production rate of every species: `omega_i = sum_j nu_ij * r_j`.
+    ///
+    /// `rates` holds one reaction rate per reaction column, in mol·m⁻³·s⁻¹.
+    /// Each stoichiometric coefficient is dimensionless, scaling its reaction's
+    /// rate into that species' production, so the result is again mol·m⁻³·s⁻¹
+    /// and carries [`ReactionRate`] at the type level rather than a bare
+    /// scalar.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`MisshapedRates`] when `rates.len()` differs from
+    /// [`Self::n_reactions`].
+    pub fn net_production(
+        &self,
+        rates: &[ReactionRate<T>],
+    ) -> Result<Vec<ReactionRate<T>>, MisshapedRates> {
+        if rates.len() != self.n_reactions() {
+            return Err(MisshapedRates {
+                n_reactions: self.n_reactions(),
+                supplied: rates.len(),
+            });
+        }
+
+        let mut omega = alloc::vec![ReactionRate::from_base(T::ZERO); self.n_species()];
+        for (species, reaction, coefficient) in self.matrix.entries() {
+            omega[species] += rates[reaction] * *coefficient;
+        }
+        Ok(omega)
     }
 }

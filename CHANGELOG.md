@@ -20,3 +20,6 @@ All notable changes are documented here, following a keep-a-changelog shape.
   multiplication so a wrong-order constant is a compile error. The rate
   coefficient's temperature dependence is Proteus's contract (ADR 0055 R4)
   and is not reimplemented here.
+- Net production `omega = nu · r` on the stoichiometric matrix, returning
+  typed `ReactionRate` values, with a hand-computed water-formation network
+  and the element-conservation identity `sum M_i omega_i = 0` as oracles.
