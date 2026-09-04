@@ -1,0 +1,74 @@
+[package]
+# Registry name only. `prometheus` on crates.io is the metrics client, so this
+# publishes as `prometheus-kinetics` while the library keeps its `prometheus`
+# module path — the same convention `proteus-mat` and `gaia-mesh` follow.
+name = "prometheus-kinetics"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.95"
+authors = ["Ryan Clanton <ryanclanton@outlook.com>"]
+description = "Species mass balance: reaction networks, rate laws, and zero-dimensional kinetics"
+repository = "https://github.com/ryancinsight/prometheus"
+license = "MIT OR Apache-2.0"
+readme = "README.md"
+keywords = ["chemical-kinetics", "reaction-network", "stoichiometry", "multiphysics"]
+categories = ["science", "simulation"]
+publish = true
+
+[lib]
+# Import path stays `prometheus` regardless of the registry name above.
+name = "prometheus"
+path = "src/lib.rs"
+
+[dependencies]
+aequitas = { version = "0.2.0", git = "https://github.com/ryancinsight/aequitas", default-features = false }
+eunomia = { version = "0.8.0", git = "https://github.com/ryancinsight/eunomia", default-features = false }
+# Sparse stoichiometric storage. Default features pull mnemosyne; Phase 0 only
+# needs the COO layout, so the allocator substrate stays out of this graph.
+leto = { version = "0.43.0", git = "https://github.com/ryancinsight/leto", default-features = false, features = ["std"], optional = true }
+
+[dev-dependencies]
+proptest = "1.11.0"
+
+[features]
+default = ["std"]
+# Leto is not `no_std`, so stoichiometry rides the `std` feature. Species and
+# concentration remain available with default features off.
+std = ["aequitas/std", "eunomia/std", "dep:leto"]
+
+[lints.rust]
+missing_docs = "deny"
+unsafe_code = "forbid"
+
+[lints.clippy]
+pedantic = { level = "deny", priority = -1 }
+
+# Pedantic floor from the first commit: the crate starts pedantic-clean, so
+# there is no allow-list and no ratchet. A new hit is fixed, never allowed.
+
+# --- Restriction floor ---
+# Kinetics is input-dependent throughout, so a panicking path is a defect
+# rather than an inconvenience. Library output belongs to the caller.
+unwrap_used = "deny"
+print_stdout = "deny"
+print_stderr = "deny"
+dbg_macro = "deny"
+
+# --- Not denied here, and why ---
+# `indexing_slicing` and `arithmetic_side_effects` are trust-boundary and
+# parser lints, not compute-kernel lints. A module that ever parses untrusted
+# input (a mechanism specification, say) carries them as a module-scoped
+# `deny` instead, at the boundary where the input crosses.
+
+[profile.dev]
+debug = "line-tables-only"
+
+[profile.dev.package."*"]
+debug = false
+
+[profile.dev.build-override]
+debug = false
+
+[profile.release]
+debug = false
+strip = "symbols"
