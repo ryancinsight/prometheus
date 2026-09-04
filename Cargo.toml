@@ -26,6 +26,8 @@ eunomia = { version = "0.8.0", git = "https://github.com/ryancinsight/eunomia", 
 # Sparse stoichiometric storage. Default features pull mnemosyne; Phase 0 only
 # needs the COO layout, so the allocator substrate stays out of this graph.
 leto = { version = "0.43.0", git = "https://github.com/ryancinsight/leto", default-features = false, features = ["std"], optional = true }
+# Time-integration policy. The reaction system is a Horae `ExplicitSystem`.
+horae = { version = "0.1.0", git = "https://github.com/ryancinsight/horae", default-features = false, optional = true }
 
 [dev-dependencies]
 proptest = "1.11.0"
@@ -34,7 +36,7 @@ proptest = "1.11.0"
 default = ["std"]
 # Leto is not `no_std`, so stoichiometry rides the `std` feature. Species and
 # concentration remain available with default features off.
-std = ["aequitas/std", "eunomia/std", "dep:leto"]
+std = ["aequitas/std", "eunomia/std", "dep:leto", "dep:horae"]
 
 [lints.rust]
 missing_docs = "deny"

@@ -31,6 +31,8 @@ pub mod rate;
 pub mod species;
 #[cfg(feature = "std")]
 pub mod stoichiometry;
+#[cfg(feature = "std")]
+pub mod system;
 
 pub use concentration::{Concentration, InvalidConcentration};
 pub use enthalpy::{MisshapedEnthalpies, heat_release};
@@ -42,3 +44,5 @@ pub use species::{MolarMass, NonPositiveMolarMass, Species};
 pub use stoichiometry::{
     InvalidStoichiometry, MisshapedMasses, MisshapedRates, StoichiometricMatrix,
 };
+#[cfg(feature = "std")]
+pub use system::FirstOrderDecay;
