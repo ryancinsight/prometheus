@@ -26,12 +26,14 @@
 extern crate alloc;
 
 pub mod concentration;
+pub mod enthalpy;
 pub mod rate;
 pub mod species;
 #[cfg(feature = "std")]
 pub mod stoichiometry;
 
 pub use concentration::{Concentration, InvalidConcentration};
+pub use enthalpy::{MisshapedEnthalpies, heat_release};
 pub use rate::{
     FirstOrderConstant, SecondOrderConstant, ThirdOrderConstant, first_order_rate, mass_action_rate,
 };

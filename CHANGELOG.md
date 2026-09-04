@@ -23,3 +23,6 @@ All notable changes are documented here, following a keep-a-changelog shape.
 - Net production `omega = nu · r` on the stoichiometric matrix, returning
   typed `ReactionRate` values, with a hand-computed water-formation network
   and the element-conservation identity `sum M_i omega_i = 0` as oracles.
+- Reaction enthalpy `q = Σ rⱼ ΔHⱼ` (`heat_release`) as the typed coupling term
+  a thermal balance consumes; the `ReactionRate × MolarEnergy ==
+  VolumetricPowerDensity` dimension is derived, not asserted.
