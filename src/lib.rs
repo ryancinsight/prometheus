@@ -26,11 +26,13 @@
 extern crate alloc;
 
 pub mod concentration;
+pub mod rate;
 pub mod species;
 #[cfg(feature = "std")]
 pub mod stoichiometry;
 
 pub use concentration::{Concentration, InvalidConcentration};
+pub use rate::mass_action_rate;
 pub use species::{MolarMass, NonPositiveMolarMass, Species};
 #[cfg(feature = "std")]
 pub use stoichiometry::{InvalidStoichiometry, MisshapedMasses, StoichiometricMatrix};
