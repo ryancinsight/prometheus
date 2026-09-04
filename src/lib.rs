@@ -32,7 +32,9 @@ pub mod species;
 pub mod stoichiometry;
 
 pub use concentration::{Concentration, InvalidConcentration};
-pub use rate::mass_action_rate;
+pub use rate::{
+    FirstOrderConstant, SecondOrderConstant, ThirdOrderConstant, first_order_rate, mass_action_rate,
+};
 pub use species::{MolarMass, NonPositiveMolarMass, Species};
 #[cfg(feature = "std")]
 pub use stoichiometry::{InvalidStoichiometry, MisshapedMasses, StoichiometricMatrix};

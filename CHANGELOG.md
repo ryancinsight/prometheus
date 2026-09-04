@@ -12,7 +12,11 @@ All notable changes are documented here, following a keep-a-changelog shape.
   molar concentrations.
 - Sparse `StoichiometricMatrix` over Leto COO storage, with the mass-conservation
   oracle νᵀ M = 0 exercised on the water-formation network at `f32` and `f64`.
-- Mass-action rate laws (`mass_action_rate`) with arbitrary integer reaction
-  order, verified against zeroth-, first-, second-, and third-order closed
-  forms. The rate coefficient's temperature dependence is Proteus's contract
-  (ADR 0055 R4) and is not reimplemented here.
+- Mass-action rate laws with arbitrary integer reaction order, verified
+  against zeroth-, first-, second-, and third-order closed forms. Rate
+  constants are typed aequitas quantities (`FirstOrderConstant`,
+  `SecondOrderConstant`, `ThirdOrderConstant`) rather than bare scalars, and
+  `first_order_rate` derives its `ReactionRate` result by aequitas
+  multiplication so a wrong-order constant is a compile error. The rate
+  coefficient's temperature dependence is Proteus's contract (ADR 0055 R4)
+  and is not reimplemented here.
