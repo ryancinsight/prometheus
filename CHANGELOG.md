@@ -30,4 +30,6 @@ All notable changes are documented here, following a keep-a-changelog shape.
   `horae::ExplicitSystem` computing `dC/dt = ν·r` from its stoichiometric
   matrix and per-reaction mass-action rates, with fixed-step RK4 recovering
   the first-order, second-order (`2A → B`), and reversible-equilibrium
-  (`c_B/c_A → K_eq`) closed forms.
+  (`c_B/c_A → K_eq`) closed forms; the refinement oracle recovers RK4's fourth
+  order, and the balanced-network invariants (mass conservation and
+  non-negativity) hold under integration.

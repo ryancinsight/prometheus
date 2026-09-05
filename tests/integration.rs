@@ -100,3 +100,81 @@ fn network_rejects_out_of_range_reactant() {
         })
     ));
 }
+
+#[test]
+fn rk4_recovers_fourth_order() {
+    // The first-order decay is smooth, so refining the step size must recover
+    // RK4's declared fourth order: err(h) / err(h/2) = 2^4 = 16.
+    let nu = StoichiometricMatrix::<f64>::try_from_entries(2, 1, [(0, 0, -1.0), (1, 0, 1.0)])
+        .expect("in-range stoichiometry");
+    let network = ReactionNetwork::new(nu, vec![(1.0, vec![(0, 1)])]).expect("valid network");
+    let exact = (-1.0_f64).exp();
+
+    let mut errors = [0.0_f64; 3];
+    for (slot, (h, steps)) in [(0.02, 50), (0.01, 100), (0.005, 200)]
+        .into_iter()
+        .enumerate()
+    {
+        let mut state = [1.0, 0.0];
+        integrate_fixed(&network, &mut state, steps, h);
+        errors[slot] = (state[0] - exact).abs();
+    }
+
+    // The leading term is C.h^4, so each halving divides the error by sixteen;
+    // the recovered order is the base-2 logarithm of the ratio.
+    let order_coarse = (errors[0] / errors[1]).log2();
+    let order_fine = (errors[1] / errors[2]).log2();
+    assert!(
+        (order_coarse - 4.0).abs() < 0.5,
+        "expected order 4, saw {order_coarse}"
+    );
+    assert!(
+        (order_fine - 4.0).abs() < 0.5,
+        "expected order 4, saw {order_fine}"
+    );
+}
+
+/// 2 H2 + O2 -> 2 H2O forward network with commanding molar masses 2, 32, 18
+/// (the binary-exact convention the stoichiometry oracles use).
+fn water_formation() -> (ReactionNetwork<f64>, [f64; 3]) {
+    let nu = StoichiometricMatrix::<f64>::try_from_entries(
+        3,
+        1,
+        [(0, 0, -2.0), (1, 0, -1.0), (2, 0, 2.0)],
+    )
+    .expect("in-range stoichiometry");
+    let network = ReactionNetwork::new(nu, vec![(0.5, vec![(0, 2), (1, 1)])]).expect("valid");
+    (network, [2.0, 32.0, 18.0])
+}
+
+#[test]
+fn balanced_network_conserves_mass_under_integration() {
+    // sum_i M_i omega_i = 2(-2r) + 32(-r) + 18(2r) = 0 holds at every stage,
+    // so the linear invariant sum M_i c_i is preserved by the RK step up to
+    // rounding.
+    let (network, masses) = water_formation();
+    let mut state = [2.0, 1.0, 0.0];
+    let initial: f64 = state.iter().zip(&masses).map(|(c, m)| c * m).sum();
+
+    // t = 10 exhausts the stoichiometric charge; the integrator slows as the
+    // rate approaches zero.
+    integrate_fixed(&network, &mut state, 1000, 0.01);
+
+    let final_mass: f64 = state.iter().zip(&masses).map(|(c, m)| c * m).sum();
+    assert_close(initial, 36.0, 0.0);
+    assert_close(final_mass, initial, 1e-12);
+}
+
+#[test]
+fn concentrations_remain_nonnegative() {
+    let (network, _) = water_formation();
+    let mut state = [2.0, 1.0, 0.0];
+    integrate_fixed(&network, &mut state, 1000, 0.01);
+
+    for concentration in state {
+        assert!(
+            concentration >= 0.0,
+            "concentration went negative: {concentration}"
+        );
+    }
+}
