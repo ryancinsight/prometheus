@@ -27,15 +27,17 @@ extern crate alloc;
 
 pub mod concentration;
 pub mod enthalpy;
+#[cfg(feature = "std")]
+pub mod network;
 pub mod rate;
 pub mod species;
 #[cfg(feature = "std")]
 pub mod stoichiometry;
-#[cfg(feature = "std")]
-pub mod system;
 
 pub use concentration::{Concentration, InvalidConcentration};
 pub use enthalpy::{MisshapedEnthalpies, heat_release};
+#[cfg(feature = "std")]
+pub use network::{InvalidNetwork, ReactionNetwork, StateDimensionMismatch};
 pub use rate::{
     FirstOrderConstant, SecondOrderConstant, ThirdOrderConstant, first_order_rate, mass_action_rate,
 };
@@ -44,5 +46,3 @@ pub use species::{MolarMass, NonPositiveMolarMass, Species};
 pub use stoichiometry::{
     InvalidStoichiometry, MisshapedMasses, MisshapedRates, StoichiometricMatrix,
 };
-#[cfg(feature = "std")]
-pub use system::FirstOrderDecay;

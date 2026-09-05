@@ -26,6 +26,8 @@ All notable changes are documented here, following a keep-a-changelog shape.
 - Reaction enthalpy `q = Σ rⱼ ΔHⱼ` (`heat_release`) as the typed coupling term
   a thermal balance consumes; the `ReactionRate × MolarEnergy ==
   VolumetricPowerDensity` dimension is derived, not asserted.
-- First-order zero-dimensional integration through Horae: `FirstOrderDecay`
-  implements `horae::ExplicitSystem`, and fixed-step RK4 recovers the closed
-  form `c_A(t) = c_A0 exp(-k t)` — Prometheus is Horae's first consumer.
+- Zero-dimensional integration through Horae: `ReactionNetwork` implements
+  `horae::ExplicitSystem` computing `dC/dt = ν·r` from its stoichiometric
+  matrix and per-reaction mass-action rates, with fixed-step RK4 recovering
+  the first-order, second-order (`2A → B`), and reversible-equilibrium
+  (`c_B/c_A → K_eq`) closed forms.

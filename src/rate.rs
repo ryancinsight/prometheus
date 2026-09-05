@@ -110,7 +110,7 @@ pub fn first_order_rate<T: RealField>(
 /// Uses only multiplication and the multiplicative identity, so it stays valid
 /// for every `T: RealField` without assuming a `powi` surface on the trait.
 #[inline]
-fn integer_power<T: RealField>(base: T, exponent: Order) -> T {
+pub(crate) fn integer_power<T: RealField>(base: T, exponent: Order) -> T {
     let mut result = T::ONE;
     let mut square = base;
     let mut remaining = exponent;
