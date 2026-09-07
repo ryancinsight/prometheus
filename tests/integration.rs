@@ -7,8 +7,10 @@
 
 use aequitas::systems::si::quantities::Time;
 use horae::integration::tableau::Rk4;
-use horae::integration::{StepWorkspace, step_into};
-use horae::system::ExplicitSystem;
+use horae::integration::{
+    BackwardEuler, ImplicitWorkspace, StepWorkspace, step_implicit_into, step_into,
+};
+use horae::system::{ExplicitSystem, ImplicitSystem};
 use horae::time::{Instant, StepSize};
 use prometheus::{ReactionNetwork, StoichiometricMatrix};
 
@@ -41,6 +43,69 @@ where
         state.copy_from_slice(&output);
         time = report.end();
     }
+}
+
+/// Advance `state` with Horae's allocation-free damped-Newton backward Euler
+/// stepper. The output and implicit workspace are allocated once for the
+/// complete march, not inside the stepping loop.
+fn integrate_implicit_fixed<System>(
+    system: &System,
+    state: &mut [f64],
+    n_steps: usize,
+    h: f64,
+    tolerance: f64,
+) where
+    System: ImplicitSystem<f64>,
+    System::Error: core::fmt::Debug,
+{
+    let start = Instant::new(Time::from_base(0.0)).expect("finite start");
+    let step = StepSize::new(Time::from_base(h)).expect("finite step");
+    let mut workspace = ImplicitWorkspace::<f64>::new(state.len()).expect("nonzero dimension");
+
+    let mut output = vec![0.0; state.len()];
+    let mut time = start;
+    for _ in 0..n_steps {
+        let report = step_implicit_into(
+            system,
+            BackwardEuler,
+            time,
+            step,
+            state,
+            &mut output,
+            &mut workspace,
+            tolerance,
+        )
+        .expect("implicit step advances");
+        state.copy_from_slice(&output);
+        time = report.end();
+    }
+}
+
+fn robertson() -> ReactionNetwork<f64> {
+    // A -> B; 2B -> B + C; B + C -> A + C. This is the reaction scheme in
+    // Robertson (1966), as reproduced by the INdAM-Bari ROBER test report.
+    let nu = StoichiometricMatrix::try_from_entries(
+        3,
+        3,
+        [
+            (0, 0, -1.0),
+            (1, 0, 1.0),
+            (1, 1, -1.0),
+            (2, 1, 1.0),
+            (0, 2, 1.0),
+            (1, 2, -1.0),
+        ],
+    )
+    .expect("in-range Robertson stoichiometry");
+    ReactionNetwork::new(
+        nu,
+        vec![
+            (0.04, vec![(0, 1)]),
+            (3e7, vec![(1, 2)]),
+            (1e4, vec![(1, 1), (2, 1)]),
+        ],
+    )
+    .expect("valid Robertson network")
 }
 
 #[test]
@@ -177,4 +242,62 @@ fn concentrations_remain_nonnegative() {
             "concentration went negative: {concentration}"
         );
     }
+}
+
+#[test]
+fn reaction_network_jacobian_matches_robertson_equations() {
+    let network = robertson();
+    let time = Instant::new(Time::from_base(0.0)).expect("finite fixture");
+    let state = [0.7, 1e-5, 0.29999];
+    let mut jacobian = [0.0_f64; 9];
+    network
+        .jacobian(time, &state, &mut jacobian)
+        .expect("Jacobian forms");
+
+    // The expected matrix is ∂f/∂y for the published Robertson equations.
+    let expected = [
+        -0.04,
+        1e4 * state[2],
+        1e4 * state[1],
+        0.04,
+        -6e7 * state[1] - 1e4 * state[2],
+        -1e4 * state[1],
+        0.0,
+        6e7 * state[1],
+        0.0,
+    ];
+    for (actual, expected) in jacobian.into_iter().zip(expected) {
+        let scale = actual.abs().max(expected.abs()).max(1.0);
+        assert!((actual - expected).abs() <= 16.0 * f64::EPSILON * scale);
+    }
+}
+
+#[test]
+fn backward_euler_validates_robertson_stiff_trajectory() {
+    // The INdAM-Bari ROBER report (§10.2–§10.4) identifies Robertson (1966),
+    // gives the reaction equations, and records the original interval as
+    // 0 ≤ t ≤ 40. The reference below is an independent Radau integration of
+    // that cited problem at tighter tolerances; the fixed-step method is
+    // checked at t = 40 with its first-order discretization bound visible.
+    //
+    // Sources:
+    // https://archimede.uniba.it/~testset/report/rober.pdf
+    // https://scipython.com/books/book2/chapter-8-scipy/examples/solving-a-system-of-stiff-odes/
+    let network = robertson();
+    let mut state = [1.0, 0.0, 0.0];
+    integrate_implicit_fixed(&network, &mut state, 40_000, 0.001, 1e-10);
+
+    let reference = [
+        0.715_827_068_719_463_6,
+        9.185_534_764_559_855e-6,
+        0.284_163_745_745_772_9,
+    ];
+    // Backward Euler is first order. At h = 10⁻³ the derived O(h) global
+    // discretization bound is below 5·10⁻⁴ on this finite interval; the
+    // reference digits themselves are much more precise.
+    for (actual, expected) in state.into_iter().zip(reference) {
+        assert_close(actual, expected, 5e-4);
+    }
+    assert_close(state.iter().sum(), 1.0, 1e-12);
+    assert!(state.into_iter().all(|concentration| concentration >= 0.0));
 }

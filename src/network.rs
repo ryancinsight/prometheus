@@ -1,14 +1,16 @@
-//! Homogeneous reaction networks as Horae explicit systems.
+//! Homogeneous reaction networks as Horae explicit and implicit systems.
 //!
 //! Horae owns the time-stepping; Prometheus supplies the right-hand side. A
-//! [`ReactionNetwork`] implements [`ExplicitSystem`] by computing the net
+//! [`ReactionNetwork`] implements Horae's system seams by computing the net
 //! production `ω = ν · r` from the stored stoichiometry and per-reaction
-//! mass-action rates, writing `dC/dt` into the derivative slice Horae drives.
+//! mass-action rates. Its analytic Jacobian is assembled from the same
+//! mass-action representation, so implicit consumers do not need a separate
+//! reaction-system implementation.
 
 use alloc::vec::Vec;
 
 use eunomia::RealField;
-use horae::system::ExplicitSystem;
+use horae::system::{ExplicitSystem, ImplicitSystem};
 use horae::time::Instant;
 
 use crate::rate::{Order, integer_power};
@@ -41,16 +43,16 @@ pub enum InvalidNetwork {
     },
 }
 
-/// A system was evaluated with state or derivative slices that do not match
-/// the network's species count.
+/// A system was evaluated with state or output slices that do not match the
+/// network's species count.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct StateDimensionMismatch {
     /// Species count declared by the network.
     pub n_species: usize,
     /// Length of the state slice supplied.
     pub state: usize,
-    /// Length of the derivative slice supplied.
-    pub derivative: usize,
+    /// Length of the derivative or Jacobian output slice supplied.
+    pub output: usize,
 }
 
 /// A homogeneous reaction network: `dC/dt = ν · r` with mass-action rates.
@@ -135,7 +137,7 @@ impl<T: RealField> ExplicitSystem<T> for ReactionNetwork<T> {
             return Err(StateDimensionMismatch {
                 n_species,
                 state: state.len(),
-                derivative: derivative.len(),
+                output: derivative.len(),
             });
         }
 
@@ -148,6 +150,54 @@ impl<T: RealField> ExplicitSystem<T> for ReactionNetwork<T> {
                 });
             for (species, production) in derivative.iter_mut().enumerate() {
                 *production += self.stoichiometry.coefficient(species, reaction) * rate;
+            }
+        }
+        Ok(())
+    }
+}
+
+impl<T: RealField> ImplicitSystem<T> for ReactionNetwork<T> {
+    fn jacobian(
+        &self,
+        _time: Instant<T>,
+        state: &[T],
+        jacobian: &mut [T],
+    ) -> Result<(), Self::Error> {
+        let n_species = self.n_species();
+        let expected_jacobian = n_species * n_species;
+        if state.len() != n_species || jacobian.len() != expected_jacobian {
+            return Err(StateDimensionMismatch {
+                n_species,
+                state: state.len(),
+                output: jacobian.len(),
+            });
+        }
+
+        jacobian.fill(T::ZERO);
+        for (reaction, (coefficient, reactants)) in self.reactions.iter().enumerate() {
+            for (term, (differentiated_species, order)) in reactants.iter().enumerate() {
+                if *order == 0 {
+                    continue;
+                }
+
+                // Differentiate the product directly instead of dividing by a
+                // concentration. This remains defined at the zero-concentration
+                // boundary where a valid kinetic state commonly starts.
+                let mut derivative_rate = *coefficient * T::from_f64(f64::from(*order));
+                for (factor, (species, exponent)) in reactants.iter().enumerate() {
+                    let exponent = if factor == term {
+                        *order - 1
+                    } else {
+                        *exponent
+                    };
+                    derivative_rate *= integer_power(state[*species], exponent);
+                }
+
+                for species in 0..n_species {
+                    let entry = species * n_species + *differentiated_species;
+                    jacobian[entry] +=
+                        self.stoichiometry.coefficient(species, reaction) * derivative_rate;
+                }
             }
         }
         Ok(())

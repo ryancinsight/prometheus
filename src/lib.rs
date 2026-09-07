@@ -9,8 +9,9 @@
 //!
 //! Phase 0 is zero-dimensional on purpose: the network integrates a species
 //! vector forward from an initial composition, a temperature, and a reaction
-//! network, using aequitas quantities for units, eunomia scalars for the
-//! numeric dimension, and Leto sparse arrays for the stoichiometric matrix.
+//! network through Horae's explicit and analytic-Jacobian implicit policies,
+//! using aequitas quantities for units, eunomia scalars for the numeric
+//! dimension, and Leto sparse arrays for the stoichiometric matrix.
 //! Every claim carries an analytical oracle — closed form, conservation law,
 //! or published benchmark — because, as new construction, there is no
 //! reference implementation to difference against.

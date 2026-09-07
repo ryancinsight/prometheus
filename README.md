@@ -19,6 +19,12 @@ integration. Reactive-transport discretization, combustion closure,
 heterogeneous and surface reactions, plasma chemistry, electrochemistry, and
 phase equilibrium are later phases, and none is scaffolded.
 
+For stiff networks, `ReactionNetwork` implements Horae's `ImplicitSystem`
+contract. It assembles the analytic mass-action Jacobian into a caller-owned
+buffer, so damped-Newton Backward Euler stepping performs no steady-state
+allocation. The Robertson stiff-kinetics trajectory is validated over the
+original test interval against an independently computed reference.
+
 ## Verification
 
 Every claim carries an analytical oracle — a closed form, a conservation law,
