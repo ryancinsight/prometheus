@@ -1,0 +1,110 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+  CARGO_INCREMENTAL: "0"
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+      - uses: dtolnay/rust-toolchain@a5f673d0ba8626c3977bb416a1612774bc82181b
+        with:
+          components: clippy, rustfmt
+      - uses: taiki-e/install-action@cbc0d781df01b1867f3d6401299786f6193ad0b1
+        with:
+          tool: cargo-nextest
+      # Restores on every branch, saves only from the default branch: a PR
+      # cannot poison the shared entry, and the cold build is what pushes this
+      # job past the five-minute verification target.
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6
+        with:
+          save-if: ${{ github.ref == 'refs/heads/main' }}
+      # The cache action builds its key with `cargo metadata`, which it runs
+      # without `--locked`. On a lockfile that has drifted from the manifests
+      # cargo rewrites it there, and every `--locked` step below would then be
+      # verifying a lockfile that is not the committed one — the check passing
+      # for the wrong reason. Assert the setup left it alone.
+      - name: Cache setup left the lockfile alone
+        run: git diff --exit-code -- Cargo.lock
+      - name: Format
+        run: cargo fmt --all -- --check
+      # `std` pulls leto and horae; without it only species and concentration
+      # compile. Both configurations ship, so both are built.
+      - name: Feature check
+        run: cargo check --locked --no-default-features
+      - name: Clippy
+        run: cargo clippy --locked --all-targets --all-features -- -D warnings
+      # nextest applies the committed .config/nextest.toml budget (30s slow,
+      # 60s terminate); bare `cargo test` bypasses that instrument. Doctests
+      # are the one thing it does not run, hence the separate step.
+      - name: Native tests
+        run: cargo nextest run --locked --all-features
+      - name: Documentation tests
+        run: cargo test --locked --doc --all-features
+      - name: Documentation
+        env:
+          RUSTDOCFLAGS: -D warnings
+        run: cargo doc --locked --no-deps --all-features
+
+  # The declared floor, actually built. `rust-toolchain.toml` pins 1.97.0, and
+  # a committed pin outranks whatever a setup action selects — so the floor is
+  # requested through RUSTUP_TOOLCHAIN, which does override it, and the job
+  # prints the compiler it got. Without that the job silently re-tests 1.97.0
+  # and the `rust-version` claim stays unverified.
+  msrv:
+    # The floor is a literal here: the `env` context is not available in a job
+    # name, and referencing it makes the whole workflow file fail to parse —
+    # which registers as a run with no jobs rather than a failing check.
+    name: MSRV (1.95)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      MSRV: "1.95"
+      RUSTUP_TOOLCHAIN: "1.95"
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+      - uses: dtolnay/rust-toolchain@a5f673d0ba8626c3977bb416a1612774bc82181b
+        with:
+          toolchain: ${{ env.MSRV }}
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6
+        with:
+          save-if: ${{ github.ref == 'refs/heads/main' }}
+      - name: Cache setup left the lockfile alone
+        run: git diff --exit-code -- Cargo.lock
+      - name: Show the compiler under test
+        run: |
+          rustc --version
+          rustc --version | grep -q "${MSRV}" || { echo "::error::MSRV job is not running ${MSRV}"; exit 1; }
+      - name: Build at the declared floor
+        run: cargo check --locked --all-features --all-targets
+
+  # Public-surface compatibility, informational on pull requests. The blocking
+  # comparison belongs to a release (atlas ATLAS-SEMVER-GATE-MAIN-PUSH-RED), so
+  # this call never passes `release-gate`.
+  semver:
+    name: SemVer gate
+    uses: ryancinsight/atlas/.github/workflows/semver-gate.yml@806949a176cc139efe7c514d7e42c9b9a9447f45
+    permissions:
+      contents: read
+    with:
+      package: prometheus-kinetics
+      rust-toolchain: "1.97.0"
+
+  supply-chain:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+      - uses: dtolnay/rust-toolchain@a5f673d0ba8626c3977bb416a1612774bc82181b
+      - uses: EmbarkStudios/cargo-deny-action@3c6349835b2b7b196a839186cb8b78e02f7b5f25
