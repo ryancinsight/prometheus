@@ -72,12 +72,13 @@ pub fn mass_action_rate<T, KD>(
 where
     T: RealField,
 {
-    let factor = reactants
-        .iter()
-        .fold(T::ONE, |acc, (order, concentration)| {
-            acc * integer_power(*concentration.as_base(), *order)
-        });
-    ReactionRate::from_base(*coefficient.as_base() * factor)
+    let factor = mass_action_product(
+        *coefficient.as_base(),
+        reactants
+            .iter()
+            .map(|(order, concentration)| (*concentration.as_base(), *order)),
+    );
+    ReactionRate::from_base(factor)
 }
 
 /// First-order mass-action rate: `r = k·c`, with the result dimension derived
@@ -105,21 +106,23 @@ pub fn first_order_rate<T: RealField>(
     coefficient * concentration
 }
 
-/// `base ^ exponent` for a non-negative integer exponent, by repeated squaring.
+/// The mass-action product `k · ∏ᵢ cᵢ^νᵢ`: a rate coefficient scaled by each
+/// reactant base raised to its reaction order.
 ///
-/// Uses only multiplication and the multiplicative identity, so it stays valid
-/// for every `T: RealField` without assuming a `powi` surface on the trait.
+/// Each term is a `(base, order)` pair, where the base is a molar
+/// concentration or a component of the integrated state vector, so the same
+/// product serves the typed [`mass_action_rate`], the reaction network's
+/// derivative, and its analytic Jacobian (which re-forms the product with one
+/// exponent decremented). Integer exponentiation is multiplication-only, so
+/// the product stays defined at zero concentration and the Jacobian never
+/// divides.
 #[inline]
-pub(crate) fn integer_power<T: RealField>(base: T, exponent: Order) -> T {
-    let mut result = T::ONE;
-    let mut square = base;
-    let mut remaining = exponent;
-    while remaining > 0 {
-        if remaining & 1 == 1 {
-            result *= square;
-        }
-        square *= square;
-        remaining >>= 1;
-    }
-    result
+pub(crate) fn mass_action_product<T, I>(coefficient: T, terms: I) -> T
+where
+    T: RealField,
+    I: IntoIterator<Item = (T, Order)>,
+{
+    terms.into_iter().fold(coefficient, |acc, (base, order)| {
+        acc * T::powi(base, i32::try_from(order).unwrap_or(i32::MAX))
+    })
 }

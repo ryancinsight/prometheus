@@ -5,6 +5,8 @@
 //! and reversible equilibrium. The network computes `dC/dt = ν · r` from its
 //! stoichiometry and per-reaction mass-action rates.
 
+pub mod common;
+
 use aequitas::systems::si::quantities::Time;
 use horae::integration::tableau::Rk4;
 use horae::integration::{
@@ -199,17 +201,97 @@ fn rk4_recovers_fourth_order() {
     );
 }
 
-/// 2 H2 + O2 -> 2 H2O forward network with commanding molar masses 2, 32, 18
-/// (the binary-exact convention the stoichiometry oracles use).
+/// A 100-species / 500-reaction sparse network, checked against a naive dense
+/// `omega = nu * r` reference and a structural count of the swept terms.
+///
+/// This is the suite's only large-mechanism case: the Robertson 3×3 fixture
+/// cannot distinguish a CSC column sweep from a full dense rescan, while this
+/// one exercises the assembler at a size where an index or stride bug would
+/// show. The `swept` count pins the traversal to the nonzeros (so the
+/// assembler never visits the 50 000 dense cells); the *asymptotic* claim that
+/// one evaluation costs `O(nnz)` is a complexity argument this value oracle
+/// does not by itself prove — there is no benchmark harness here to measure it.
+#[test]
+fn sparse_large_network_evaluate_matches_dense_reference() {
+    const N_SPECIES: usize = 100;
+    const N_REACTIONS: usize = 500;
+    const COEFFICIENT_STEP: [f64; 5] = [0.0, 0.1, 0.2, 0.3, 0.4];
+
+    // Deterministic sparse pattern: three stoichiometric entries and two
+    // reactant terms per reaction, for nnz on the order of 1500 of 50 000
+    // dense cells.
+    let mut entries = Vec::with_capacity(N_REACTIONS * 3);
+    let mut reactions = Vec::with_capacity(N_REACTIONS);
+    for reaction in 0..N_REACTIONS {
+        let a = reaction % N_SPECIES;
+        let b = (reaction * 37 + 11) % N_SPECIES;
+        let c = (reaction * 53 + 29) % N_SPECIES;
+        entries.push((a, reaction, -2.0));
+        entries.push((b, reaction, -1.0));
+        entries.push((c, reaction, 2.0));
+        let coefficient = 0.5 + COEFFICIENT_STEP[reaction % 5];
+        reactions.push((coefficient, vec![(a, 2_u32), (b, 1_u32)]));
+    }
+
+    let nu =
+        StoichiometricMatrix::try_from_entries(N_SPECIES, N_REACTIONS, entries.iter().copied())
+            .expect("in-range sparse stoichiometry");
+
+    // The column accessor enumerates only stored nonzeros, so the assembler's
+    // traversal is bounded by nnz rather than by the dense shape.
+    let swept: usize = (0..N_REACTIONS)
+        .map(|reaction| nu.column(reaction).count())
+        .sum();
+    assert!(
+        swept < N_SPECIES * N_REACTIONS / 10,
+        "column sweep visited {swept} of {} cells",
+        N_SPECIES * N_REACTIONS
+    );
+
+    // Dense reference: assemble nu row-major (species × reaction) and form the
+    // production the definitional way, rescanning every cell.
+    let mut dense = vec![0.0_f64; N_SPECIES * N_REACTIONS];
+    for (species, reaction, coefficient) in &entries {
+        dense[species * N_REACTIONS + reaction] += *coefficient;
+    }
+
+    let mut state = vec![0.0_f64; N_SPECIES];
+    let mut concentration = 1.0;
+    for component in &mut state {
+        *component = concentration;
+        concentration += 0.01;
+    }
+
+    let mut omega = vec![0.0_f64; N_SPECIES];
+    for (reaction, (coefficient, reactants)) in reactions.iter().enumerate() {
+        let mut rate = *coefficient;
+        for (species, order) in reactants {
+            rate *= state[*species].powi(i32::try_from(*order).unwrap_or(i32::MAX));
+        }
+        for (species, production) in omega.iter_mut().enumerate() {
+            *production += dense[species * N_REACTIONS + reaction] * rate;
+        }
+    }
+
+    let network = ReactionNetwork::new(nu, reactions).expect("valid sparse network");
+    let start = Instant::new(Time::from_base(0.0)).expect("finite start");
+    let mut derivative = vec![0.0_f64; N_SPECIES];
+    network
+        .evaluate(start, &state, &mut derivative)
+        .expect("dimensions match");
+
+    for (actual, expected) in derivative.iter().zip(&omega) {
+        assert_close(*actual, *expected, 1e-9);
+    }
+}
+
+/// 2 H2 + O2 -> 2 H2O forward network, wrapping the shared binary-exact
+/// stoichiometry fixture in a reaction network.
 fn water_formation() -> (ReactionNetwork<f64>, [f64; 3]) {
-    let nu = StoichiometricMatrix::<f64>::try_from_entries(
-        3,
-        1,
-        [(0, 0, -2.0), (1, 0, -1.0), (2, 0, 2.0)],
-    )
-    .expect("in-range stoichiometry");
-    let network = ReactionNetwork::new(nu, vec![(0.5, vec![(0, 2), (1, 1)])]).expect("valid");
-    (network, [2.0, 32.0, 18.0])
+    let (matrix, masses) = common::water_formation::<f64>();
+    let network =
+        ReactionNetwork::new(matrix, vec![(0.5, vec![(0, 2), (1, 1)])]).expect("valid network");
+    (network, masses.map(|mass| *mass.as_base()))
 }
 
 #[test]
