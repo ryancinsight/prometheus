@@ -13,7 +13,7 @@ use eunomia::RealField;
 use horae::system::{ExplicitSystem, ImplicitSystem};
 use horae::time::Instant;
 
-use crate::rate::{Order, integer_power};
+use crate::rate::{Order, mass_action_product};
 use crate::stoichiometry::StoichiometricMatrix;
 
 /// A reaction was supplied with a rate coefficient that is not finite and
@@ -143,13 +143,14 @@ impl<T: RealField> ExplicitSystem<T> for ReactionNetwork<T> {
 
         derivative.fill(T::ZERO);
         for (reaction, (coefficient, reactants)) in self.reactions.iter().enumerate() {
-            let rate = reactants
-                .iter()
-                .fold(*coefficient, |acc, (species, order)| {
-                    acc * integer_power(state[*species], *order)
-                });
-            for (species, production) in derivative.iter_mut().enumerate() {
-                *production += self.stoichiometry.coefficient(species, reaction) * rate;
+            let rate = mass_action_product(
+                *coefficient,
+                reactants
+                    .iter()
+                    .map(|(species, order)| (state[*species], *order)),
+            );
+            for (species, nu) in self.stoichiometry.column(reaction) {
+                derivative[species] += *nu * rate;
             }
         }
         Ok(())
@@ -183,20 +184,24 @@ impl<T: RealField> ImplicitSystem<T> for ReactionNetwork<T> {
                 // Differentiate the product directly instead of dividing by a
                 // concentration. This remains defined at the zero-concentration
                 // boundary where a valid kinetic state commonly starts.
-                let mut derivative_rate = *coefficient * T::from_f64(f64::from(*order));
-                for (factor, (species, exponent)) in reactants.iter().enumerate() {
-                    let exponent = if factor == term {
-                        *order - 1
-                    } else {
-                        *exponent
-                    };
-                    derivative_rate *= integer_power(state[*species], exponent);
-                }
+                let derivative_rate = mass_action_product(
+                    *coefficient * T::from_f64(f64::from(*order)),
+                    reactants
+                        .iter()
+                        .enumerate()
+                        .map(|(factor, (species, exponent))| {
+                            let exponent = if factor == term {
+                                order.saturating_sub(1)
+                            } else {
+                                *exponent
+                            };
+                            (state[*species], exponent)
+                        }),
+                );
 
-                for species in 0..n_species {
-                    let entry = species * n_species + *differentiated_species;
-                    jacobian[entry] +=
-                        self.stoichiometry.coefficient(species, reaction) * derivative_rate;
+                for (species, nu) in self.stoichiometry.column(reaction) {
+                    jacobian[species * n_species + *differentiated_species] +=
+                        *nu * derivative_rate;
                 }
             }
         }

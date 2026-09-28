@@ -5,55 +5,27 @@
 //! stoichiometry) and by the conservation identity `sum M_i omega_i = 0`,
 //! which holds for a mass-balanced network regardless of the chosen rate.
 
+pub mod common;
+
 use aequitas::systems::si::quantities::ReactionRate;
-use eunomia::RealField;
-use prometheus::{MisshapedRates, MolarMass, Species, StoichiometricMatrix};
-
-/// 2 H₂ + O₂ → 2 H₂O with molar masses 2, 32, 18 (binary-exact, the same
-/// convention the stoichiometry oracles use).
-fn water_formation<T: RealField>() -> (StoichiometricMatrix<T>, [MolarMass<T>; 3]) {
-    let h2 =
-        Species::new("H2", MolarMass::from_base(T::from_f64(2.0))).expect("positive molar mass");
-    let o2 =
-        Species::new("O2", MolarMass::from_base(T::from_f64(32.0))).expect("positive molar mass");
-    let h2o =
-        Species::new("H2O", MolarMass::from_base(T::from_f64(18.0))).expect("positive molar mass");
-
-    let matrix = StoichiometricMatrix::try_from_entries(
-        3,
-        1,
-        [
-            (0, 0, T::from_f64(-2.0)), // 2 H2 consumed
-            (1, 0, T::from_f64(-1.0)), // 1 O2 consumed
-            (2, 0, T::from_f64(2.0)),  // 2 H2O produced
-        ],
-    )
-    .expect("in-range stoichiometric entries");
-
-    (matrix, [h2.molar_mass(), o2.molar_mass(), h2o.molar_mass()])
-}
-
-fn assert_close(actual: f64, expected: f64) {
-    let tol = 8.0 * f64::EPSILON * expected.abs().max(actual.abs()).max(1.0);
-    assert!((actual - expected).abs() <= tol, "{actual} vs {expected}");
-}
+use prometheus::{MisshapedRates, StoichiometricMatrix};
 
 #[test]
 fn net_production_matches_hand_computed_network() {
-    let (nu, _) = water_formation::<f64>();
+    let (nu, _) = common::water_formation::<f64>();
     let rate = ReactionRate::from_base(3.0); // reaction proceeds at 3 mol·m⁻³·s⁻¹
 
     let omega: Vec<ReactionRate<f64>> = nu.net_production(&[rate]).expect("one reaction column");
 
     assert_eq!(omega.len(), 3);
-    assert_close(*omega[0].as_base(), -6.0); // H2: -2 · 3
-    assert_close(*omega[1].as_base(), -3.0); // O2: -1 · 3
-    assert_close(*omega[2].as_base(), 6.0); // H2O: +2 · 3
+    common::assert_close(*omega[0].as_base(), -6.0); // H2: -2 · 3
+    common::assert_close(*omega[1].as_base(), -3.0); // O2: -1 · 3
+    common::assert_close(*omega[2].as_base(), 6.0); // H2O: +2 · 3
 }
 
 #[test]
 fn net_production_conserves_total_mass() {
-    let (nu, masses) = water_formation::<f64>();
+    let (nu, masses) = common::water_formation::<f64>();
     let rate = ReactionRate::from_base(3.0);
 
     let omega = nu.net_production(&[rate]).expect("one reaction column");
@@ -65,12 +37,12 @@ fn net_production_conserves_total_mass() {
         .zip(&masses)
         .map(|(production, mass)| *production.as_base() * *mass.as_base())
         .sum();
-    assert_close(total, 0.0);
+    common::assert_close(total, 0.0);
 }
 
 #[test]
 fn net_production_is_generic_over_scalar() {
-    let (nu, _) = water_formation::<f32>();
+    let (nu, _) = common::water_formation::<f32>();
     let rate = ReactionRate::from_base(2.0_f32);
     let omega = nu.net_production(&[rate]).expect("one reaction column");
     // -2 · 2 = -4 is binary-exact.

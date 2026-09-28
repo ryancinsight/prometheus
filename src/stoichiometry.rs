@@ -10,17 +10,20 @@ use alloc::vec::Vec;
 
 use aequitas::systems::si::quantities::ReactionRate;
 use eunomia::RealField;
-use leto::{CooArray, SparseStorage, SparseStorageMut};
+use leto::{CooArray, CscArray, SparseStorage, SparseStorageMut};
 
 use crate::species::MolarMass;
 
 /// A sparse stoichiometric matrix with shape species-by-reaction.
 ///
-/// Stored as a Leto COO array so construction is entry-wise and the sparse
-/// layout is the substrate's rather than a hand-rolled parallel.
+/// Stored as a Leto CSC array so each reaction's nonzero coefficients form one
+/// contiguous run in ascending species order — the traversal the derivative and
+/// Jacobian assemblers walk. Construction goes through an entry-wise COO
+/// intermediate, so the sparse layout is the substrate's rather than a
+/// hand-rolled parallel.
 #[derive(Clone, Debug)]
 pub struct StoichiometricMatrix<T: RealField> {
-    matrix: CooArray<T>,
+    matrix: CscArray<T>,
 }
 
 /// A stoichiometric matrix was rejected at construction.
@@ -85,7 +88,7 @@ impl<T: RealField> StoichiometricMatrix<T> {
             return Err(InvalidStoichiometry::Empty);
         }
 
-        let mut matrix = CooArray::new(n_species, n_reactions);
+        let mut coo = CooArray::new(n_species, n_reactions);
         for (species, reaction, coefficient) in entries {
             if species >= n_species || reaction >= n_reactions {
                 return Err(InvalidStoichiometry::IndexOutOfRange {
@@ -97,11 +100,17 @@ impl<T: RealField> StoichiometricMatrix<T> {
             }
             // Sum with any prior contribution at this slot so construction is
             // associative in the order of the iterator.
-            let prior = matrix.get(species, reaction).unwrap_or(T::ZERO);
-            matrix.set(species, reaction, prior + coefficient);
+            let prior = coo.get(species, reaction).unwrap_or(T::ZERO);
+            coo.set(species, reaction, prior + coefficient);
         }
 
-        Ok(Self { matrix })
+        // `CscArray::from_coo` is the orientation-preserving conversion; Leto's
+        // `CooArray::to_csc` delegates through `CsrArray::to_csc`, which is a
+        // *transpose* (it swaps both dimensions and coordinates), so it would
+        // store `nu^T` and misattribute reactions to species.
+        Ok(Self {
+            matrix: CscArray::from_coo(coo),
+        })
     }
 
     /// Number of species (row count).
@@ -116,11 +125,31 @@ impl<T: RealField> StoichiometricMatrix<T> {
         self.matrix.ncols()
     }
 
+    /// The nonzero entries of reaction `reaction` as `(species, coefficient)`
+    /// pairs, in ascending species order.
+    ///
+    /// Assembling `nu · r` over this column touches only the reaction's
+    /// nonzero species, so a full product costs `O(nnz)` across all reactions
+    /// rather than `O(n_species · n_reactions)`. Use [`Self::coefficient`] for
+    /// a one-off element; this accessor is what a per-reaction sweep wants.
+    pub fn column(&self, reaction: usize) -> impl Iterator<Item = (usize, &T)> {
+        self.matrix.col_entries(reaction)
+    }
+
     /// The coefficient at `(species, reaction)`, or zero when the slot is
     /// absent from the sparse store.
     #[must_use]
     pub fn coefficient(&self, species: usize, reaction: usize) -> T {
         self.matrix.get(species, reaction).unwrap_or(T::ZERO)
+    }
+
+    /// Every nonzero `(species, reaction, coefficient)` triplet, grouped by
+    /// reaction column in ascending species order.
+    fn entries(&self) -> impl Iterator<Item = (usize, usize, &T)> {
+        (0..self.n_reactions()).flat_map(move |reaction| {
+            self.column(reaction)
+                .map(move |(species, coefficient)| (species, reaction, coefficient))
+        })
     }
 
     /// Mass-conservation residual per reaction: sum over species of
@@ -143,7 +172,7 @@ impl<T: RealField> StoichiometricMatrix<T> {
         }
 
         let mut residuals = alloc::vec![T::ZERO; self.n_reactions()];
-        for (species, reaction, coefficient) in self.matrix.entries() {
+        for (species, reaction, coefficient) in self.entries() {
             let mass = *molar_masses[species].as_base();
             residuals[reaction] += *coefficient * mass;
         }
@@ -188,7 +217,7 @@ impl<T: RealField> StoichiometricMatrix<T> {
         }
 
         let mut omega = alloc::vec![ReactionRate::from_base(T::ZERO); self.n_species()];
-        for (species, reaction, coefficient) in self.matrix.entries() {
+        for (species, reaction, coefficient) in self.entries() {
             omega[species] += rates[reaction] * *coefficient;
         }
         Ok(omega)
