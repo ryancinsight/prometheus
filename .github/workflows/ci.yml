@@ -39,7 +39,7 @@ jobs:
         run: git diff --exit-code -- Cargo.lock
       - name: Format
         run: cargo fmt --all -- --check
-      # `std` pulls leto and horae; without it only species and concentration
+      # `std` pulls leto and horae-time; without it only species and concentration
       # compile. Both configurations ship, so both are built.
       - name: Feature check
         run: cargo check --locked --no-default-features
