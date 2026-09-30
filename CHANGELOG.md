@@ -4,6 +4,12 @@ All notable changes are documented here, following a keep-a-changelog shape.
 
 ## [Unreleased]
 
+### Changed
+
+- The optional time-integration dependency is declared as the registry package
+  `horae-time` (the `horae` name belongs to another crates.io owner). Its library
+  name stays `horae`, so every `use horae::` path is unchanged.
+
 ### Added
 
 - Phase 0 core: a `Species` type carrying a strictly positive molar mass (typed
