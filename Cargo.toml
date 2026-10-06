@@ -21,7 +21,7 @@ name = "prometheus"
 path = "src/lib.rs"
 
 [dependencies]
-aequitas = { version = "0.2.0", git = "https://github.com/ryancinsight/aequitas", default-features = false }
+aequitas = { version = "0.2.1", git = "https://github.com/ryancinsight/aequitas", default-features = false }
 eunomia = { version = "0.9.0", git = "https://github.com/ryancinsight/eunomia", default-features = false }
 # Sparse stoichiometric storage. Default features pull mnemosyne; Phase 0 only
 # needs the COO layout, so the allocator substrate stays out of this graph.
