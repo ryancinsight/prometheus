@@ -8,6 +8,9 @@
   Jacobians instead of clamping orders above i32::MAX. Ordinary signed orders
   retain their existing native-precision multiplication sequence.
 
+- Keep the MAX-order comparison fixture entirely in the signed exponent
+  domain, with explicit factor-domain and summed-order assertions.
+
 ### Breaking
 
 - Move public provider identities to Eunomia 0.10, Aequitas 0.3, Leto 0.46

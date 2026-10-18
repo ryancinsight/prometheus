@@ -16,8 +16,11 @@ current Atlas board schema; a separate checklist.md would add retired-board debt
   concentration errors, ordinary result bits and allocation-free public calls.
 - [x] Pass debug/release 42-test suites, doctests, feature check, strict Clippy,
   Rustdoc, Rust 1.95 MSRV, patch-class SemVer comparison and existing cargo-deny.
-- [x] Assess controlled timing: ordinary median ratios 0.974–1.113, maximum
-  increase 0.75 ns/call in the bounded same-graph macOS probe.
+- [x] Retain both timing samples: author maximum +0.74417 ns/call; independent
+  same-harness maximum +3.99146 ns/call, plus mixed signed stress +5.35708 ns.
+  Frozen caller/codegen contexts differ; neither sample is a general bound.
+- [x] Repair review P3 with [i32::MAX, i32::MAX, 1] reference factors and
+  explicit signed-domain/summed-order assertions; preserve the original witness.
 - [ ] Assess that cost against the consuming application budget and obtain
   exact-head independent review.
 - [ ] Assess hosted gates at the draft head before considering integration.

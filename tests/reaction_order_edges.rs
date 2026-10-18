@@ -72,10 +72,22 @@ fn signed_transition_rates_and_derivatives_remain_continuous() {
         let single = ReactionNetwork::new(matrix.clone(), vec![(1.0, vec![(0, order)])])
             .expect("accepted order");
         // This independent public representation uses only signed-domain powers.
-        let lower = order / 2;
-        let factored =
-            ReactionNetwork::new(matrix, vec![(1.0, vec![(0, lower), (0, order - lower)])])
-                .expect("same monomial");
+        let terms = if order == u32::MAX {
+            vec![(0, m), (0, m), (0, 1)]
+        } else {
+            let lower = order / 2;
+            vec![(0, lower), (0, order - lower)]
+        };
+        assert!(terms.iter().all(|(_, exponent)| *exponent <= m));
+        assert_eq!(
+            terms
+                .iter()
+                .map(|(_, exponent)| u64::from(*exponent))
+                .sum::<u64>(),
+            u64::from(order)
+        );
+        let factored = ReactionNetwork::new(matrix, vec![(1.0, terms)])
+            .expect("same monomial with signed-domain factors");
         let mut rate = [0.0; 2];
         let mut reference = rate;
         let mut jacobian = [0.0; 4];

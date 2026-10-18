@@ -80,3 +80,40 @@ budget before merge. No test, threshold, timeout or gate is relaxed.
 `cargo package --locked --allow-dirty` cannot complete because the crates.io
 index has no horae-time package. The existing provider publication/authentication
 hold is unchanged. No registry publication or authentication retry occurs.
+
+## Independent review and frozen caller contexts
+
+Independent review of d4f40e1 reproduces the original two failures on baseline
+and five passes on the repair. It reports no arithmetic defect across its
+20,764-case four-build campaign, 12,225 ordinary bit-identical rows, and 3,327
+analytical comparisons. Its one P3 finding concerns the new transition test:
+the MAX reference split included i32::MAX+1. That reference now uses
+[i32::MAX, i32::MAX, 1], with assertions that every factor fits the signed
+domain and their u64 metadata sum equals the requested order. The original
+five-test witness remains unchanged. Exact-head review renewal is still needed.
+
+Both timing samples are retained as observations. The author's frozen Cargo
+release probe reports maximum ordinary median increase +0.74417 ns/call.
+The reviewer compiles the byte-identical harness with direct rustc O3 and
+explicit overflow checks, linked to independently built O3 libraries from the
+same locked provider cohort; it reports +3.99146 ns/call (f32 signed-boundary
+Jacobian: 18.70208 -> 22.69354 ns). Its mixed ordinary hot/stream Jacobians
+increase by 1.61–3.80 ns; mixed signed-boundary stress increases by up to
+5.35708 ns. Neither sample is a universal cap, and neither is discarded.
+
+Bounded disassembly of the four frozen binaries locates the timed caller by
+Mach-O function starts and the 200,000-call counters. Author baseline/current
+callers have 1,219/1,264 static instructions and 115/120 conditional branches;
+reviewer baseline/current have 1,259/1,305 and 123/128. Both current callers
+retain the ordinary power loop and a branch to the cold high-order helper.
+The reviewer caller contains six umulh instructions versus two in the author
+caller, consistent with extra integer-overflow checking; their code layout,
+metadata and compilation boundaries also differ. These are whole-caller static
+counts, not executed-instruction or cycle estimates. No experiment isolates one
+cause for the timing discrepancy, so no sole-cause attribution is made.
+
+The later forced-inlining-only experiment produced byte-identical binaries;
+it cannot establish a speedup or explain away the independent baseline/current
+cost. Application performance acceptance remains held. Zero measured heap
+traffic and unchanged 112-byte network layout do not measure peak stack, total
+callee stack, RSS or consuming-solver cost; those remain unmeasured.
