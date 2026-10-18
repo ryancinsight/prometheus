@@ -30,7 +30,8 @@ Local package verification is blocked: the crates.io index has no horae-time
 package. This is publication availability, not a source correctness failure.
 No publication or authentication retry is attempted.
 
-Independent d4f40e1 review finds no arithmetic failure and one P3 fixture gap:
+Independent review of [PR #55](https://github.com/ryancinsight/prometheus/pull/55)
+finds no arithmetic failure and one P3 fixture gap (exact head in the design note):
 the MAX transition reference used one unsigned-only factor. The repaired
 reference uses [i32::MAX, i32::MAX, 1] and checks each factor and their sum.
 The new structural assertion fails on the old split and passes on the repair.
