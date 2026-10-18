@@ -3,7 +3,7 @@
 # publishes as `prometheus-kinetics` while the library keeps its `prometheus`
 # module path — the same convention `proteus-mat` and `gaia-mesh` follow.
 name = "prometheus-kinetics"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2024"
 rust-version = "1.95"
 authors = ["Ryan Clanton <ryanclanton@outlook.com>"]
@@ -21,15 +21,16 @@ name = "prometheus"
 path = "src/lib.rs"
 
 [dependencies]
-aequitas = { version = "0.2.0", git = "https://github.com/ryancinsight/aequitas", default-features = false }
-eunomia = { version = "0.9.0", git = "https://github.com/ryancinsight/eunomia", default-features = false }
-# Sparse stoichiometric storage. Default features pull mnemosyne; Phase 0 only
-# needs the COO layout, so the allocator substrate stays out of this graph.
-leto = { version = "0.45.0", git = "https://github.com/ryancinsight/leto", default-features = false, features = ["std"], optional = true }
+aequitas = { version = "0.3.0", git = "https://github.com/ryancinsight/aequitas", default-features = false }
+eunomia = { version = "0.10.0", git = "https://github.com/ryancinsight/eunomia", default-features = false }
+# Sparse stoichiometric storage from the current landed provider cohort.
+# Default features stay off; std supplies the COO layout used by the network.
+leto = { version = "0.46.0", git = "https://github.com/ryancinsight/leto", default-features = false, features = ["std"], optional = true }
 # Time-integration policy. The reaction system is a Horae `ExplicitSystem`.
-horae-time = { version = "0.1.0", git = "https://github.com/ryancinsight/horae", default-features = false, optional = true }
+horae-time = { version = "0.2.0", git = "https://github.com/ryancinsight/horae", default-features = false, optional = true }
 
 [dev-dependencies]
+mnemosyne = { package = "mnemosyne-memory", version = "0.10.0", git = "https://github.com/ryancinsight/Mnemosyne.git", default-features = false }
 proptest = "1.11.0"
 
 [features]

@@ -18,6 +18,9 @@ use aequitas::systems::si::dimensions::{
 use aequitas::systems::si::quantities::{MolarConcentration, ReactionRate, ReciprocalTime};
 use eunomia::RealField;
 
+#[cfg(test)]
+mod tests;
+
 /// A reaction order: the non-negative integer exponent on one species
 /// concentration in the mass-action product.
 pub type Order = u32;
@@ -123,6 +126,32 @@ where
     I: IntoIterator<Item = (T, Order)>,
 {
     terms.into_iter().fold(coefficient, |acc, (base, order)| {
-        acc * T::powi(base, i32::try_from(order).unwrap_or(i32::MAX))
+        acc * reaction_power(base, order)
     })
+}
+
+/// Retain the complete unsigned order without changing the ordinary path.
+/// For n > `i32::MAX`, n = 2q + r with q <= `i32::MAX` and r in {0,1}.
+/// The provider evaluates q in native precision, then p^2 * base^r gives
+/// base^n. This needs at most 31 provider iterations and two extra products,
+/// no allocation, scalar widening, or loop proportional to the order.
+#[inline]
+fn reaction_power<T: RealField>(base: T, order: Order) -> T {
+    if let Ok(exponent) = i32::try_from(order) {
+        return T::powi(base, exponent);
+    }
+    high_order_power(base, order)
+}
+
+#[cold]
+#[inline(never)]
+fn high_order_power<T: RealField>(base: T, order: Order) -> T {
+    let half = i32::try_from(order >> 1).expect("half a u32 fits a nonnegative i32");
+    let power = T::powi(base, half);
+    let squared = power * power;
+    if order & 1 == 0 {
+        squared
+    } else {
+        squared * base
+    }
 }
