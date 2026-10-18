@@ -1,5 +1,29 @@
 # Changelog
 
+## 0.2.0
+
+### Fixed
+
+- Retain every accepted u32 reaction order in mass-action rates and analytic
+  Jacobians instead of clamping orders above i32::MAX. Ordinary signed orders
+  retain their existing native-precision multiplication sequence.
+
+- Keep the MAX-order comparison fixture entirely in the signed exponent
+  domain, with explicit factor-domain and summed-order assertions.
+
+### Breaking
+
+- Move public provider identities to Eunomia 0.10, Aequitas 0.3, Leto 0.46
+  and Horae 0.2. Consumers must update these providers together and rebuild
+  Quantity, RealField and time-system integrations against the same cohort.
+  Prometheus item names and the accepted u32 order domain remain unchanged.
+
+### Changed
+
+- Lock current landed transitive providers and add allocation regression
+  instrumentation using Mnemosyne 0.10. See docs/reaction-order.md.
+
+
 All notable changes are documented here, following a keep-a-changelog shape.
 
 ## [Unreleased]
