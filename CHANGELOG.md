@@ -6,6 +6,14 @@ All notable changes are documented here, following a keep-a-changelog shape.
 
 ### Changed
 
+- Follow the current provider cohort. `aequitas` moves to 0.3.1, `eunomia` to
+  0.10.0, the optional `leto` to 0.46.4, and the optional `horae-time` to
+  0.2.2; the lock resolves each at its published revision. One git source
+  resolves to one revision, so every edge that names a provider repository has
+  to agree on a version or the resolver refuses the pair. The public Prometheus
+  surface is unchanged: no type from a moved provider appears in a Prometheus
+  signature.
+
 - The optional time-integration dependency is declared as the registry package
   `horae-time` (the `horae` name belongs to another crates.io owner). Its library
   name stays `horae`, so every `use horae::` path is unchanged.
