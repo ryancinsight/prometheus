@@ -132,7 +132,7 @@ dependencies = [
 [[package]]
 name = "horae-time"
 version = "0.2.2"
-source = "git+https://github.com/ryancinsight/horae#0671c62cf710e7d70499f8593f6e2ae50e4e370a"
+source = "git+https://github.com/ryancinsight/horae#2ab2b95d4d92699e411215c7fe01c49a89a26cd7"
 dependencies = [
  "aequitas",
  "eunomia",
@@ -141,7 +141,7 @@ dependencies = [
 [[package]]
 name = "leto"
 version = "0.46.4"
-source = "git+https://github.com/ryancinsight/leto#6778a0ccfd15da410e8db8052c0d28ede15858b5"
+source = "git+https://github.com/ryancinsight/leto#ae3b59625fd0c0e15e00ddc8d8c6a36954f2f104"
 dependencies = [
  "aequitas",
  "eunomia",
