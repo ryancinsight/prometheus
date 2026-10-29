@@ -22,7 +22,7 @@ path = "src/lib.rs"
 
 [dependencies]
 aequitas = { version = "0.3.1", git = "https://github.com/ryancinsight/aequitas", default-features = false }
-eunomia = { version = "0.10.0", git = "https://github.com/ryancinsight/eunomia", default-features = false }
+eunomia = { version = "0.11.0", git = "https://github.com/ryancinsight/eunomia", default-features = false }
 # Sparse stoichiometric storage. Default features pull mnemosyne; Phase 0 only
 # needs the COO layout, so the allocator substrate stays out of this graph.
 leto = { version = "0.46.4", git = "https://github.com/ryancinsight/leto", default-features = false, features = ["std"], optional = true }
