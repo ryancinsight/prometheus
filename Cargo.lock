@@ -199,7 +199,7 @@ checksum = "ed5909b6e89a2db4456e54cd5f673791d7eca6732202bbf2a9cc504fe2f9b84a"
 [[package]]
 name = "horae-time"
 version = "0.2.2"
-source = "git+https://github.com/ryancinsight/horae#367765e5dd9a82fa4ddfc7139626b547b8df9175"
+source = "git+https://github.com/ryancinsight/horae#dfb1ac72c04a69f0ff6d9d68813396f17911e0af"
 dependencies = [
  "aequitas",
  "eunomia",
