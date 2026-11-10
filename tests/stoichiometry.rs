@@ -2,6 +2,7 @@
 
 pub mod common;
 
+use eunomia::RealField;
 use prometheus::{InvalidStoichiometry, MisshapedMasses, MolarMass, StoichiometricMatrix};
 
 #[test]
@@ -72,4 +73,15 @@ fn rejects_misshaped_molar_mass_vector() {
             supplied: 1,
         })
     );
+}
+
+#[test]
+fn public_matrix_accepts_current_eunomia_bound() {
+    fn client<T: RealField>(matrix: &StoichiometricMatrix<T>) -> usize {
+        matrix.n_species()
+    }
+
+    let matrix = StoichiometricMatrix::<f64>::try_from_entries(2, 1, [])
+        .expect("invariant: positive dimensions and an empty sparse payload form a valid matrix");
+    assert_eq!(client(&matrix), 2);
 }

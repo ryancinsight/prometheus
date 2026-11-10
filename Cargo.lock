@@ -4,8 +4,8 @@ version = 4
 
 [[package]]
 name = "aequitas"
-version = "0.3.1"
-source = "git+https://github.com/ryancinsight/aequitas#c636bb84efda17784b6b5ba0c03933292f37a8cf"
+version = "0.3.2"
+source = "git+https://github.com/ryancinsight/aequitas#aa9e89fb317f1e2e734a34c173e3b5135351a4bc"
 dependencies = [
  "eunomia",
  "typenum",
@@ -148,8 +148,8 @@ dependencies = [
 
 [[package]]
 name = "eunomia"
-version = "0.11.0"
-source = "git+https://github.com/ryancinsight/eunomia#d8ee31abf9e10c3aaa4efd67ed5912a612086115"
+version = "0.12.0"
+source = "git+https://github.com/ryancinsight/eunomia#00ffd14a9e2791795ded32e3b4842e8eb79208ce"
 dependencies = [
  "bytemuck",
  "eunomia-derive",
@@ -158,8 +158,8 @@ dependencies = [
 
 [[package]]
 name = "eunomia-derive"
-version = "0.11.0"
-source = "git+https://github.com/ryancinsight/eunomia#d8ee31abf9e10c3aaa4efd67ed5912a612086115"
+version = "0.12.0"
+source = "git+https://github.com/ryancinsight/eunomia#00ffd14a9e2791795ded32e3b4842e8eb79208ce"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -199,7 +199,7 @@ checksum = "ed5909b6e89a2db4456e54cd5f673791d7eca6732202bbf2a9cc504fe2f9b84a"
 [[package]]
 name = "horae-time"
 version = "0.2.2"
-source = "git+https://github.com/ryancinsight/horae#367765e5dd9a82fa4ddfc7139626b547b8df9175"
+source = "git+https://github.com/ryancinsight/horae#d38422b5021287be7793a47a8c0d3f561c36614b"
 dependencies = [
  "aequitas",
  "eunomia",
@@ -217,8 +217,8 @@ dependencies = [
 
 [[package]]
 name = "leto"
-version = "0.46.5"
-source = "git+https://github.com/ryancinsight/leto#4a0796124613ab012eb56e47ea314fdceb08ba6d"
+version = "0.47.1"
+source = "git+https://github.com/ryancinsight/leto#7bbfe9523c5e8e5a9a87bf567485ea633b2cf9ce"
 dependencies = [
  "aequitas",
  "eunomia",
