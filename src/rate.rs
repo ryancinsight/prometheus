@@ -139,12 +139,18 @@ where
 /// recursion therefore ends after one halving. Every step is a product in `T`,
 /// so a zero base stays defined and the parity of a negative base is kept.
 ///
-/// A chain of products forming `base^order` carries `order − 1` rounding
-/// factors whatever its shape, so, absent overflow and underflow and when
-/// `(order − 1)·u < 1`, the relative error is at most `γ(order − 1)` with
-/// `γ(m) = m·u / (1 − m·u)` and `u` the unit roundoff. `γ(m)` is undefined at
-/// `m·u = 1` and negative above it, so no bound exists for `m·u ≥ 1`: at
-/// `f32`, `u = 2⁻²⁴` excludes every order above `2²⁴`.
+/// The value is defined for every `u32` order; the error bound below holds
+/// on its stated domain only. Order `0` is exact: `powi` returns `T::ONE`
+/// without forming a product, for every base including zero, infinities and
+/// NaN, so the error is zero.
+///
+/// For `order ≥ 1`, a chain of products forming `base^order` carries
+/// `m = order − 1` rounding factors whatever its shape. With `u` the unit
+/// roundoff and `γ(m) = m·u / (1 − m·u)`, which is defined only for
+/// `0 ≤ m·u < 1`, the relative error is at most `γ(m)` absent overflow and
+/// underflow (Higham, *Accuracy and Stability of Numerical Algorithms*, 2nd
+/// ed., Lemma 3.1). For `m·u ≥ 1`, `γ` bounds nothing: at `f32`, `u = 2⁻²⁴`
+/// excludes every order above `2²⁴`.
 #[inline]
 fn reaction_power<T: RealField>(base: T, order: Order) -> T {
     if let Ok(exponent) = i32::try_from(order) {
@@ -175,13 +181,16 @@ mod tests {
     /// the power shares unfolds it into a product tree of `n` factors with
     /// `n − 1` rounded products, each a factor `1 + δ` with `|δ| ≤ u`. So the
     /// computed power `c` and the exact power `t` satisfy
-    /// `|c − t| ≤ γ(n − 1)·|t|` with `γ(m) = m·u / (1 − m·u)`, defined here
-    /// because `(n − 1)·u < 1`. Numerically `(n − 1)·u = 4.7683716e-7` and
+    /// `|c − t| ≤ γ(n − 1)·|t|` with `γ(m) = m·u / (1 − m·u)`, defined only for
+    /// `0 ≤ m·u < 1` (Higham, *Accuracy and Stability of Numerical
+    /// Algorithms*, 2nd ed., Lemma 3.1), which holds here because
+    /// `(n − 1)·u < 1`. Numerically `(n − 1)·u = 4.7683716e-7` and
     /// `γ(n − 1) = 4.7683739e-7`.
     ///
     /// The test compares `c` with the reference `r = exp(y)`, where
     /// `y = n·ln_1p(base − 1)`, through `|(c − r) / r|`. Because
-    /// `ln(1 + x) ≤ x`, `|y| ≤ n·(base − 1) = 429.4967` for `base = 1.0000001`.
+    /// `ln(1 + x) ≤ x`, `|y| ≤ n·(base − 1) = 429.49673` for `base = 1.0000001`,
+    /// rounded up from `429.496729…`; the figures below use the exact value.
     /// Assume `ln_1p` and `exp` each err by at most `2u` relative (faithful
     /// rounding). Then `y` carries an absolute error of at most
     /// `|y|·(2u + u)`: `ln_1p` plus the rounding of the product by `n`. That is
@@ -191,15 +200,18 @@ mod tests {
     /// `|c − r| / |r| ≤ (γ + ε) / (1 − ε) = 4.7683753e-7`, rounded up to
     /// `4.8e-7`. The subtraction `c − r` is exact (Sterbenz), and the rounded
     /// quotient adds a relative `u`, which the rounding up of the displayed
-    /// value absorbs.
+    /// value absorbs. Sterbenz's theorem (Higham, 2nd ed., Theorem 2.5) gives
+    /// the exactness: floating-point `x` and `y` with `y/2 ≤ x ≤ 2y` satisfy
+    /// `fl(x − y) = x − y` absent underflow, and `c`, `r` differ by far less
+    /// than a factor of two.
     ///
     /// No guarantee backs the faithful-rounding assumption: the standard
     /// library documents `exp` and `ln_1p` under "Unspecified precision"
     /// (`std::primitive::f64`, Rust 1.97.0). The constant tolerates a relative
     /// error `a·u` in each of them for any `a` up to about `6.6e4`, which is
     /// the margin the assumption can lose. At `f32`,
-    /// `(n − 1)·u = (n − 1)·2⁻²⁴ ≈ 256 > 1`, so `γ(n − 1)` is undefined and
-    /// nothing is bounded; only `f64` carries it.
+    /// `(n − 1)·u = (n − 1)·2⁻²⁴ ≈ 256 > 1`, so `γ(n − 1)` bounds nothing
+    /// there; only `f64` carries it.
     const RELATIVE_BOUND_AT_U32_MAX: f64 = 4.8e-7;
 
     fn power<T: RealField>(base: f64, order: Order) -> T {
@@ -261,6 +273,23 @@ mod tests {
         assert_exact_at_both(0.0, 0, 1.0);
         assert_exact_at_both(0.0, u32::MAX, 0.0);
         assert_exact_at_both(f64::INFINITY, FIRST_UNSIGNED_ORDER, f64::INFINITY);
+    }
+
+    #[test]
+    fn order_zero_is_exactly_one_for_every_base() {
+        for base in [
+            2.0,
+            -2.0,
+            0.0,
+            -0.0,
+            1.000_000_1,
+            f64::MIN_POSITIVE / 2.0,
+            f64::INFINITY,
+            f64::NEG_INFINITY,
+            f64::NAN,
+        ] {
+            assert_exact_at_both(base, 0, 1.0);
+        }
     }
 
     #[test]
