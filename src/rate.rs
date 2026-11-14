@@ -116,6 +116,9 @@ pub fn first_order_rate<T: RealField>(
 /// exponent decremented). Integer exponentiation is multiplication-only, so
 /// the product stays defined at zero concentration and the Jacobian never
 /// divides.
+///
+/// Every `u32` order is honoured exactly: the factor is `base^order`, sign
+/// included, never a power of a clamped exponent.
 #[inline]
 pub(crate) fn mass_action_product<T, I>(coefficient: T, terms: I) -> T
 where
@@ -123,6 +126,136 @@ where
     I: IntoIterator<Item = (T, Order)>,
 {
     terms.into_iter().fold(coefficient, |acc, (base, order)| {
-        acc * T::powi(base, i32::try_from(order).unwrap_or(i32::MAX))
+        acc * reaction_power(base, order)
     })
+}
+
+/// `base^order` for the full `u32` order range, by multiplication only.
+///
+/// [`RealField::powi`] takes an `i32`, which cannot hold an order above
+/// `i32::MAX`. For such an order, `order = 2·half + parity` with
+/// `half ≤ i32::MAX`, so the factor is `(base^half)² · base^parity`; the
+/// recursion therefore ends after one halving. Every step is a product in `T`,
+/// so a zero base stays defined and the parity of a negative base is kept.
+///
+/// A chain of products forming `base^order` carries `order − 1` rounding
+/// factors whatever its shape, so the relative error is at most
+/// `γ(order − 1)` with `γ(m) = m·u / (1 − m·u)` and `u` the unit roundoff.
+#[inline]
+fn reaction_power<T: RealField>(base: T, order: Order) -> T {
+    if let Ok(exponent) = i32::try_from(order) {
+        T::powi(base, exponent)
+    } else {
+        let half = reaction_power(base, order >> 1);
+        let square = half * half;
+        if order & 1 == 0 {
+            square
+        } else {
+            square * base
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{Order, mass_action_product};
+    use eunomia::RealField;
+
+    /// First order above `i32::MAX`: the least order the former narrowing
+    /// clamped, and an even one.
+    const FIRST_UNSIGNED_ORDER: Order = 1 << 31;
+
+    /// Relative error bound of `base^u32::MAX` in `f64`.
+    ///
+    /// Forming the power takes `n − 1` products for `n = u32::MAX`, each
+    /// rounding by a factor `1 + δ` with `|δ| ≤ u = 2⁻⁵³`, so the error is at
+    /// most `γ(n − 1) = (n − 1)·u / (1 − (n − 1)·u)`. Here
+    /// `(n − 1)·u = 4.7683716e-7` and `γ(n − 1) = 4.7683739e-7`. The reference
+    /// `exp(n·ln_1p(base − 1))` adds about `|n·ln base|·2u`, which is
+    /// `9.5e-14` for `base = 1.0000001` (`n·ln base ≈ 429.5`). The sum is
+    /// `4.7683748e-7`, rounded up to `4.8e-7`. At `f32` the same bound is
+    /// `(n − 1)·2⁻²⁴ ≈ 256`, which bounds nothing, so only `f64` carries it.
+    const RELATIVE_BOUND_AT_U32_MAX: f64 = 4.8e-7;
+
+    fn power<T: RealField>(base: f64, order: Order) -> T {
+        mass_action_product(T::ONE, [(T::from_f64(base), order)])
+    }
+
+    /// Assert that both shipped scalar types return exactly `expected`, bit
+    /// for bit, so the sign of zero and of infinity is checked. `f32` widens
+    /// to `f64` exactly. Both are evaluated before the assertion so a failure
+    /// reports each type.
+    fn assert_exact_at_both(base: f64, order: Order, expected: f64) {
+        let single = f64::from(power::<f32>(base, order));
+        let double = power::<f64>(base, order);
+        assert!(
+            single.to_bits() == expected.to_bits() && double.to_bits() == expected.to_bits(),
+            "base {base}, order {order}: f32 gave {single}, f64 gave {double}, expected {expected}"
+        );
+    }
+
+    #[test]
+    fn even_order_overflow_is_positive_infinity() {
+        assert_exact_at_both(-2.0, FIRST_UNSIGNED_ORDER, f64::INFINITY);
+    }
+
+    #[test]
+    fn even_order_underflow_is_positive_zero() {
+        assert_exact_at_both(-0.5, FIRST_UNSIGNED_ORDER, 0.0);
+    }
+
+    #[test]
+    fn even_order_of_unit_magnitude_is_one() {
+        assert_exact_at_both(-1.0, FIRST_UNSIGNED_ORDER, 1.0);
+    }
+
+    #[test]
+    fn odd_order_overflow_is_negative_infinity() {
+        assert_exact_at_both(-2.0, FIRST_UNSIGNED_ORDER + 1, f64::NEG_INFINITY);
+    }
+
+    #[test]
+    fn odd_order_underflow_is_negative_zero() {
+        assert_exact_at_both(-0.5, FIRST_UNSIGNED_ORDER + 1, -0.0);
+    }
+
+    #[test]
+    fn odd_order_of_unit_magnitude_is_minus_one() {
+        assert_exact_at_both(-1.0, u32::MAX, -1.0);
+    }
+
+    #[test]
+    fn signed_range_edge_is_continuous() {
+        // `i32::MAX` is the last order `powi` takes directly, and is odd.
+        assert_exact_at_both(-1.0, u32::MAX >> 1, -1.0);
+        assert_exact_at_both(-1.0, (u32::MAX >> 1) + 1, 1.0);
+    }
+
+    #[test]
+    fn zero_and_infinite_bases_stay_defined() {
+        assert_exact_at_both(0.0, 0, 1.0);
+        assert_exact_at_both(0.0, u32::MAX, 0.0);
+        assert_exact_at_both(f64::INFINITY, FIRST_UNSIGNED_ORDER, f64::INFINITY);
+    }
+
+    #[test]
+    fn nan_base_stays_nan() {
+        assert!(power::<f32>(f64::NAN, FIRST_UNSIGNED_ORDER).is_nan());
+        assert!(power::<f64>(f64::NAN, FIRST_UNSIGNED_ORDER).is_nan());
+    }
+
+    #[test]
+    fn largest_order_matches_the_exponential_form() {
+        // Reference `exp(n·ln_1p(base − 1))` shares no code with the product;
+        // `base − 1` is exact (Sterbenz) so `ln_1p` sees the true increment.
+        let base = 1.000_000_1_f64;
+        let order = u32::MAX;
+        let expected = (f64::from(order) * (base - 1.0).ln_1p()).exp();
+        let actual = power::<f64>(base, order);
+        let relative = ((actual - expected) / expected).abs();
+        assert!(
+            relative <= RELATIVE_BOUND_AT_U32_MAX,
+            "relative error {relative} exceeds {RELATIVE_BOUND_AT_U32_MAX}: {actual} vs {expected}"
+        );
+    }
 }
