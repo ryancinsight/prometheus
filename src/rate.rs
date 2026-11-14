@@ -140,9 +140,11 @@ where
 /// so a zero base stays defined and the parity of a negative base is kept.
 ///
 /// A chain of products forming `base^order` carries `order − 1` rounding
-/// factors whatever its shape, so, absent overflow and underflow, the relative
-/// error is at most `γ(order − 1)` with `γ(m) = m·u / (1 − m·u)` and `u` the
-/// unit roundoff.
+/// factors whatever its shape, so, absent overflow and underflow and when
+/// `(order − 1)·u < 1`, the relative error is at most `γ(order − 1)` with
+/// `γ(m) = m·u / (1 − m·u)` and `u` the unit roundoff. `γ(m)` is undefined at
+/// `m·u = 1` and negative above it, so no bound exists for `m·u ≥ 1`: at
+/// `f32`, `u = 2⁻²⁴` excludes every order above `2²⁴`.
 #[inline]
 fn reaction_power<T: RealField>(base: T, order: Order) -> T {
     if let Ok(exponent) = i32::try_from(order) {
@@ -169,21 +171,35 @@ mod tests {
 
     /// Relative error bound of `base^u32::MAX` in `f64`.
     ///
-    /// Forming the power takes `n − 1` products for `n = u32::MAX`, each
-    /// rounding by a factor `1 + δ` with `|δ| ≤ u = 2⁻⁵³`, so the error is at
-    /// most `γ(n − 1) = (n − 1)·u / (1 − (n − 1)·u)`. Here
-    /// `(n − 1)·u = 4.7683716e-7` and `γ(n − 1) = 4.7683739e-7`.
+    /// Let `n = u32::MAX` and `u = 2⁻⁵³`. Copying the intermediate results that
+    /// the power shares unfolds it into a product tree of `n` factors with
+    /// `n − 1` rounded products, each a factor `1 + δ` with `|δ| ≤ u`. So the
+    /// computed power `c` and the exact power `t` satisfy
+    /// `|c − t| ≤ γ(n − 1)·|t|` with `γ(m) = m·u / (1 − m·u)`, defined here
+    /// because `(n − 1)·u < 1`. Numerically `(n − 1)·u = 4.7683716e-7` and
+    /// `γ(n − 1) = 4.7683739e-7`.
     ///
-    /// The reference is `exp(y)` with `y = n·ln_1p(base − 1)`, and
-    /// `|y| ≤ n·(base − 1) = 429.4967` for `base = 1.0000001` because
-    /// `ln(1 + x) ≤ x`. Assuming `ln_1p` and `exp` are faithful (error below
-    /// one ulp, at most `2u` relative), `y` carries an absolute error of at
-    /// most `|y|·(2u + u)`: `ln_1p` plus the rounding of the product by `n`.
-    /// That is `1.4305115e-13`, and `exp` adds its own `2u`, so the reference
-    /// relative error is `1.4327319e-13`. Combined with `γ(n − 1)` as
-    /// `(γ + ε) / (1 − ε)`, the bound is `4.7683753e-7`, rounded up to
-    /// `4.8e-7`. At `f32` the same bound is `(n − 1)·2⁻²⁴ ≈ 256`, which bounds
-    /// nothing, so only `f64` carries it.
+    /// The test compares `c` with the reference `r = exp(y)`, where
+    /// `y = n·ln_1p(base − 1)`, through `|(c − r) / r|`. Because
+    /// `ln(1 + x) ≤ x`, `|y| ≤ n·(base − 1) = 429.4967` for `base = 1.0000001`.
+    /// Assume `ln_1p` and `exp` each err by at most `2u` relative (faithful
+    /// rounding). Then `y` carries an absolute error of at most
+    /// `|y|·(2u + u)`: `ln_1p` plus the rounding of the product by `n`. That is
+    /// `1.4305115e-13`, and `exp` adds its own `2u`, so `|r − t| ≤ ε·|t|` with
+    /// `ε = 1.4327320e-13` (rounded up from `1.43273192e-13`). It follows that
+    /// `|c − r| ≤ (γ + ε)·|t|` and `|r| ≥ (1 − ε)·|t|`, so
+    /// `|c − r| / |r| ≤ (γ + ε) / (1 − ε) = 4.7683753e-7`, rounded up to
+    /// `4.8e-7`. The subtraction `c − r` is exact (Sterbenz), and the rounded
+    /// quotient adds a relative `u`, which the rounding up of the displayed
+    /// value absorbs.
+    ///
+    /// No guarantee backs the faithful-rounding assumption: the standard
+    /// library documents `exp` and `ln_1p` under "Unspecified precision"
+    /// (`std::primitive::f64`, Rust 1.97.0). The constant tolerates a relative
+    /// error `a·u` in each of them for any `a` up to about `6.6e4`, which is
+    /// the margin the assumption can lose. At `f32`,
+    /// `(n − 1)·u = (n − 1)·2⁻²⁴ ≈ 256 > 1`, so `γ(n − 1)` is undefined and
+    /// nothing is bounded; only `f64` carries it.
     const RELATIVE_BOUND_AT_U32_MAX: f64 = 4.8e-7;
 
     fn power<T: RealField>(base: f64, order: Order) -> T {

@@ -55,5 +55,5 @@ was read at `basis:` unless stated otherwise; no test was executed.
 - scope: `src/rate.rs` (module `tests`)
 - Gap (read at basis): the `reaction_power` tests cover bases -2, -0.5, -1, +0, +infinity and NaN at orders above `i32::MAX`. No test pins a `-0.0` base, a `-infinity` base at an odd order, or a subnormal base (positive and negative, `f64` and `f32` minimum subnormal) above `2^31`.
 - Outcome: each case asserts its IEEE result bit for bit through `assert_exact_at_both`: `-0.0` gives `-0.0` at an odd order and `+0.0` at an even one, `-infinity` gives `-infinity` at an odd order and `+infinity` at an even one, and a subnormal base underflows to a zero carrying the parity sign.
-- Acceptance: the new tests pass at head and fail under a mutant that applies `base.abs()` only when the base is zero or infinite, which the existing tests (`+0.0` and `+infinity` only) do not kill.
+- Acceptance: the new tests pass at head, and the `-0.0` and `-infinity` tests fail under a mutant that applies `base.abs()` only when the base is zero or infinite, which the existing tests (`+0.0` and `+infinity` only) do not kill. The subnormal tests pin IEEE underflow behavior and kill no distinct mutant, because the mutant leaves a nonzero finite base unchanged.
 - Next step: append the cases to `src/rate.rs` `tests`, then run the mutants and record which test kills each.
