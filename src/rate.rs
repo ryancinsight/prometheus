@@ -132,15 +132,17 @@ where
 
 /// `base^order` for the full `u32` order range, by multiplication only.
 ///
-/// [`RealField::powi`] takes an `i32`, which cannot hold an order above
+/// [`eunomia::FloatElement::powi`], a supertrait method of [`RealField`],
+/// takes an `i32`, which cannot hold an order above
 /// `i32::MAX`. For such an order, `order = 2·half + parity` with
 /// `half ≤ i32::MAX`, so the factor is `(base^half)² · base^parity`; the
 /// recursion therefore ends after one halving. Every step is a product in `T`,
 /// so a zero base stays defined and the parity of a negative base is kept.
 ///
 /// A chain of products forming `base^order` carries `order − 1` rounding
-/// factors whatever its shape, so the relative error is at most
-/// `γ(order − 1)` with `γ(m) = m·u / (1 − m·u)` and `u` the unit roundoff.
+/// factors whatever its shape, so, absent overflow and underflow, the relative
+/// error is at most `γ(order − 1)` with `γ(m) = m·u / (1 − m·u)` and `u` the
+/// unit roundoff.
 #[inline]
 fn reaction_power<T: RealField>(base: T, order: Order) -> T {
     if let Ok(exponent) = i32::try_from(order) {
@@ -170,11 +172,18 @@ mod tests {
     /// Forming the power takes `n − 1` products for `n = u32::MAX`, each
     /// rounding by a factor `1 + δ` with `|δ| ≤ u = 2⁻⁵³`, so the error is at
     /// most `γ(n − 1) = (n − 1)·u / (1 − (n − 1)·u)`. Here
-    /// `(n − 1)·u = 4.7683716e-7` and `γ(n − 1) = 4.7683739e-7`. The reference
-    /// `exp(n·ln_1p(base − 1))` adds about `|n·ln base|·2u`, which is
-    /// `9.5e-14` for `base = 1.0000001` (`n·ln base ≈ 429.5`). The sum is
-    /// `4.7683748e-7`, rounded up to `4.8e-7`. At `f32` the same bound is
-    /// `(n − 1)·2⁻²⁴ ≈ 256`, which bounds nothing, so only `f64` carries it.
+    /// `(n − 1)·u = 4.7683716e-7` and `γ(n − 1) = 4.7683739e-7`.
+    ///
+    /// The reference is `exp(y)` with `y = n·ln_1p(base − 1)`, and
+    /// `|y| ≤ n·(base − 1) = 429.4967` for `base = 1.0000001` because
+    /// `ln(1 + x) ≤ x`. Assuming `ln_1p` and `exp` are faithful (error below
+    /// one ulp, at most `2u` relative), `y` carries an absolute error of at
+    /// most `|y|·(2u + u)`: `ln_1p` plus the rounding of the product by `n`.
+    /// That is `1.4305115e-13`, and `exp` adds its own `2u`, so the reference
+    /// relative error is `1.4327319e-13`. Combined with `γ(n − 1)` as
+    /// `(γ + ε) / (1 − ε)`, the bound is `4.7683753e-7`, rounded up to
+    /// `4.8e-7`. At `f32` the same bound is `(n − 1)·2⁻²⁴ ≈ 256`, which bounds
+    /// nothing, so only `f64` carries it.
     const RELATIVE_BOUND_AT_U32_MAX: f64 = 4.8e-7;
 
     fn power<T: RealField>(base: f64, order: Order) -> T {
