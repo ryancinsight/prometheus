@@ -18,22 +18,6 @@ was read at `basis:` unless stated otherwise; no test was executed.
 - Adjacent (read at basis): `ReactionNetwork::new` rejects a negative coefficient under the variant `NonFiniteRate` (`src/network.rs:99-100`) while its Rustdoc lists only non-finite coefficients (`src/network.rs:82-83`); settle with the new error shape.
 - Next step: draft `docs/adr/0002-rate-constant-typing.md` choosing the typed-coefficient design (alternatives and rejected options recorded there; this item does not pick one), then implement under that ADR with every in-repo caller migrated in the same change.
 
-<a id="PROMETHEUS-ORDER-SATURATION"></a>
-## PROMETHEUS-ORDER-SATURATION — Remove silent saturation of large reaction orders [patch] — todo
-- priority: correctness; needs: none
-- basis: 87ecf5b8ba26c13d77affaca028e8a32c87acb34
-- scope: `src/rate.rs`, `CHANGELOG.md`
-- Defect (read at basis): `mass_action_product` narrows the `u32` order with `i32::try_from(order).unwrap_or(i32::MAX)`
-  (`src/rate.rs:125-126`; `Order = u32`, `:23`), so every order above `i32::MAX` yields b^2147483647, not b^order,
-  for any base the public `mass_action_rate` accepts. Witnesses (stand-alone rustc 1.97.0 `-O` program, 2026-11-13):
-  f64 base 1.0000001 at `u32::MAX`: 1.8366e93 vs 3.3733e186; base -2.0 at order 2^31: -inf vs +inf.
-- Outcome: the factor for any `u32` order equals b^order, sign included, for every base, or the order is rejected with a typed error.
-- Acceptance: a unit test co-located in `src/rate.rs` (`mass_action_product` is `pub(crate)`), failing at basis, at `f32` and `f64`:
-  base -2.0 at order 2^31 gives +inf, -0.5 gives +0.0 (sign bit), -1.0 gives 1.0; at `f64`, base 1.0000001 at `u32::MAX` is within
-  relative 4.8e-7 = (n-1)*2^-53 of `exp(n*ln_1p(b-1))` (the bound exceeds 1 at `f32`); the zeroth- to third-order oracles keep their assertions.
-- Next step: replace the narrowing with exponentiation by squaring over `u32` in `T` (multiplication-only, keeping
-  zero concentration defined), then add these cases.
-
 <a id="PROMETHEUS-RELEASE-LADDER"></a>
 ## PROMETHEUS-RELEASE-LADDER — Draft the release scope and milestone ladder [patch] — todo
 - priority: verification; needs: none
