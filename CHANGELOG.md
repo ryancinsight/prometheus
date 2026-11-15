@@ -6,13 +6,19 @@ All notable changes are documented here, following a keep-a-changelog shape.
 
 ### Changed
 
-- Follow the current provider cohort. `aequitas` moves to 0.3.1, `eunomia` to
-  0.10.0, the optional `leto` to 0.46.4, and the optional `horae-time` to
-  0.2.2; the lock resolves each at its published revision. One git source
-  resolves to one revision, so every edge that names a provider repository has
-  to agree on a version or the resolver refuses the pair. The public Prometheus
-  surface is unchanged: no type from a moved provider appears in a Prometheus
-  signature.
+- Advance the public provider cohort: Prometheus binds its scalar contract to
+  Eunomia 0.12 and its sparse-storage contract to Leto 0.47, so code generic
+  over the Eunomia 0.11 `RealField` bound no longer satisfies Prometheus's
+  public bounds. See
+  [ADR 0001](docs/adr/0001-provider-cohort-contract.md) and the
+  [migration guide](docs/migration.md).
+- Follow the current provider cohort. The manifest requires `aequitas` 0.3.1,
+  `eunomia` 0.12.0, the optional `leto` `>=0.47.1, <0.49.0`, and the optional
+  `horae-time` 0.2.2; the lock resolves each at its repository's current
+  default head. One git source resolves to one revision, so every edge that
+  names a provider repository has to agree on a version or the resolver
+  refuses the pair. The public Prometheus surface is otherwise unchanged: no
+  type from a moved provider appears in a Prometheus signature.
 
 - The optional time-integration dependency is declared as the registry package
   `horae-time` (the `horae` name belongs to another crates.io owner). Its library
