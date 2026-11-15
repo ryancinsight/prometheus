@@ -13,7 +13,7 @@ was read at `basis:` unless stated otherwise; no test was executed.
 - exit: narrowing delivered (PR #80: the dense reference raises each base by repetition); the `-0.0`/`-infinity`/subnormal edge tests pass and kill the `base.abs()` mutant — the remaining check fails without its fix.
 ## M-board-hygiene (0.2.0): the changelog states the shipped cohort — needs: none
 - exit: every provider version named in `CHANGELOG.md` equals the `Cargo.toml` requirement at the head — the grep comparison fails on drift.
-## M-1.0 (1.0.0): stable kinetics release (authority-gated) — needs: M-rate-typing, M-oracle-hardening, M-board-hygiene
+## Milestone M-1.0 (1.0.0): stable kinetics release (authority-gated) — needs: M-rate-typing, M-oracle-hardening, M-board-hygiene
 - exit: `cargo semver-checks`, publish dry-run, `cargo doc`, nextest/doctest green at all features, zero open correctness items. Veto: release authority sets the API-freeze contents; never forces `publish = true` without it.
 ## M-ecosystem: consumer-owned migrations (kwavers, CFDrs) — needs: M-1.0
 - exit: consumer receipts on their own boards; does not gate 1.0.
