@@ -37,11 +37,10 @@ open item carries exactly one `milestone:` assignment.
   variant) — the check fails on a build where a first-order constant with
   order-2 reactants compiles and returns a rate.
 - **M-oracle-hardening** (0.2.0): the network oracle and power edges are
-  pinned. Exit: `git grep -n 'unwrap_or(i32::MAX)' -- src tests` is empty
-  with `sparse_large_network_evaluate_matches_dense_reference` green
-  (`PROMETHEUS-ORDER-ORACLE-NARROWING`); the `-0.0`/`-infinity`/subnormal
-  edge tests pass and the `-0.0`/`-infinity` cases kill the `base.abs()`
-  mutant (`PROMETHEUS-ORDER-SIGNED-EDGE-TESTS`) — each check fails without
+  pinned. Exit: narrowing delivered (PR #80: the dense reference raises each
+  base by repetition); the `-0.0`/`-infinity`/subnormal edge tests pass and
+  the `-0.0`/`-infinity` cases kill the `base.abs()` mutant
+  (`PROMETHEUS-ORDER-SIGNED-EDGE-TESTS`) — the remaining check fails without
   its fix.
 - **M-board-hygiene** (0.2.0): the changelog states the shipped cohort.
   Exit: every provider version named in `CHANGELOG.md` equals the
