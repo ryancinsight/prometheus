@@ -3,12 +3,24 @@
 Open items in priority order. The meta item
 `ATLAS-PROMETHEUS-PROMOTION-2026-09-03` (atlas `backlog.md#prometheus-promotion`)
 owns registration and first publication and is not copied here. Items carry no
-`milestone:` until `PROMETHEUS-RELEASE-LADDER` lands a ladder. Evidence below
+`milestone:` until `PROMETHEUS-RELEASE-LADDER` lands a ladder. The ladder opens this board ([ADR 0003](docs/adr/0003-release-scope-1-0.md)); every item carries `milestone:`. Evidence below
 was read at `basis:` unless stated otherwise; no test was executed.
 
 <a id="PROMETHEUS-RATE-CONSTANT-UNITS"></a>
+## M-rate-typing (0.2.0): the rate-constant dimension is enforced — needs: PROMETHEUS-RATE-CONSTANT-UNITS
+- exit: a dimensionally wrong coefficient is rejected at compile time or as a typed error, for `mass_action_rate` and `ReactionNetwork::evaluate`; runnable check `cargo nextest run --locked --all-features -- rate` plus the wrong-order rejection test — fails on a build where a first-order constant with order-2 reactants returns a rate.
+## M-oracle-hardening (0.2.0): the network oracle and power edges are pinned — needs: none
+- exit: narrowing delivered (PR #80: the dense reference raises each base by repetition); the `-0.0`/`-infinity`/subnormal edge tests pass and kill the `base.abs()` mutant — the remaining check fails without its fix.
+## M-board-hygiene (0.2.0): the changelog states the shipped cohort — needs: none
+- exit: every provider version named in `CHANGELOG.md` equals the `Cargo.toml` requirement at the head — the grep comparison fails on drift.
+## M-1.0 (1.0.0): stable kinetics release (authority-gated) — needs: M-rate-typing, M-oracle-hardening, M-board-hygiene
+- exit: `cargo semver-checks`, publish dry-run, `cargo doc`, nextest/doctest green at all features, zero open correctness items. Veto: release authority sets the API-freeze contents; never forces `publish = true` without it.
+## M-ecosystem: consumer-owned migrations (kwavers, CFDrs) — needs: M-1.0
+- exit: consumer receipts on their own boards; does not gate 1.0.
+
 ## PROMETHEUS-RATE-CONSTANT-UNITS — Enforce the rate-constant dimension against reaction order [major] — todo
 - priority: correctness; needs: none
+- milestone: M-rate-typing.
 - basis: 87ecf5b8ba26c13d77affaca028e8a32c87acb34
 - scope: `src/rate.rs`, `src/network.rs`, `src/lib.rs`, `tests/rate.rs`, `tests/integration.rs`, `tests/production.rs`, `README.md`, `CHANGELOG.md`, `docs/adr/`
 - Defect (read at basis): `mass_action_rate<T, KD>` (`src/rate.rs:68-72`) accepts `Quantity<T, KD>` for any `KD` and wraps the scalar product with `ReactionRate::from_base` (`src/rate.rs:81`), so the reactant orders in the slice are not related to `KD`; a first-order constant with order-2 reactants compiles and returns a `ReactionRate`. `ReactionNetwork` stores each coefficient as bare `T` (`src/network.rs:68`, `src/network.rs:84-87`), documented as order-dependent (`src/network.rs:75-78`). Origin: atlas `gap_audit.md`, finding of 2026-10-26.
@@ -21,6 +33,7 @@ was read at `basis:` unless stated otherwise; no test was executed.
 <a id="PROMETHEUS-RELEASE-LADDER"></a>
 ## PROMETHEUS-RELEASE-LADDER — Draft the release scope and milestone ladder [patch] — todo
 - priority: verification; needs: none
+- milestone: M-1.0 (exit evidence; closes on this lane's merge).
 - basis: 87ecf5b8ba26c13d77affaca028e8a32c87acb34
 - scope: `docs/adr/` (release-scope ADR; ADR 0002 is reserved by `PROMETHEUS-RATE-CONSTANT-UNITS`), `docs/adr/README.md`, `backlog.md`
 - Outcome: release-scope ADR and milestone ladder per the stack roadmap rule (sprint: roadmap). The ladder opens this board; every item then carries `milestone:`.
@@ -31,6 +44,7 @@ was read at `basis:` unless stated otherwise; no test was executed.
 <a id="PROMETHEUS-CHANGELOG-DRIFT"></a>
 ## PROMETHEUS-CHANGELOG-DRIFT — Bring the Unreleased changelog in line with the manifest [patch] — todo
 - priority: verification; needs: none
+- milestone: M-board-hygiene.
 - basis: 87ecf5b8ba26c13d77affaca028e8a32c87acb34
 - scope: `CHANGELOG.md`, `docs/migration.md`
 - Defect (read at basis): `CHANGELOG.md` `## [Unreleased]` states `eunomia` moves to 0.10.0 and the optional `leto` to 0.46.4; `Cargo.toml` requires `eunomia` 0.12.0 and `leto` `>=0.47.1, <0.49.0`, and `docs/migration.md` and `README.md` describe the Eunomia 0.12 and Leto 0.47 cohort. The Unreleased section does not mention the 0.12 cohort break that ADR 0001 records.
@@ -38,9 +52,11 @@ was read at `basis:` unless stated otherwise; no test was executed.
 - Acceptance: each provider version named in `CHANGELOG.md` equals the `Cargo.toml` requirement at the head (`git grep -n 'eunomia\|leto' CHANGELOG.md Cargo.toml`), and the ADR 0001 break is listed under a `Changed` entry with its migration link.
 - Next step: edit the entry, then run the docs and link checks of the committed gate.
 
+
 <a id="PROMETHEUS-ORDER-SIGNED-EDGE-TESTS"></a>
 ## PROMETHEUS-ORDER-SIGNED-EDGE-TESTS — Pin signed zero, infinity and subnormal bases above order 2^31 [patch] — todo
 - priority: verification; needs: none
+- milestone: M-oracle-hardening.
 - basis: 769faa950130e2e07ea86e6a395edd220dde8234
 - scope: `src/rate.rs` (module `tests`)
 - Gap (read at basis): the `reaction_power` tests cover bases -2, -0.5, -1, +0, +infinity and NaN at orders above `i32::MAX`. No test pins a `-0.0` base, a `-infinity` base at an odd order, or a subnormal base (positive and negative, `f64` and `f32` minimum subnormal) above `2^31`.
