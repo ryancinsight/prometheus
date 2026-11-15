@@ -265,8 +265,12 @@ fn sparse_large_network_evaluate_matches_dense_reference() {
     let mut omega = vec![0.0_f64; N_SPECIES];
     for (reaction, (coefficient, reactants)) in reactions.iter().enumerate() {
         let mut rate = *coefficient;
+        // One factor per unit of reaction order, so the reference never
+        // narrows the `u32` order and shares no code with `reaction_power`.
         for (species, order) in reactants {
-            rate *= state[*species].powi(i32::try_from(*order).unwrap_or(i32::MAX));
+            for _ in 0..*order {
+                rate *= state[*species];
+            }
         }
         for (species, production) in omega.iter_mut().enumerate() {
             *production += dense[species * N_REACTIONS + reaction] * rate;
