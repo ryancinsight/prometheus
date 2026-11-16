@@ -100,6 +100,8 @@ corresponding Delivered row.
 ## Revisions
 
 - 2026-11-16: ADR 0002 and the typed rate constant landed (PRs #84-#87), so
-  the M-rate-typing exit cites ADR 0002 and the delivery line cites PR #79
-  and the open judge verdict; the ladder item stays open for that verdict;
-  no exit check changed.
+  the M-rate-typing exit cites ADR 0002 and names the open seal item
+  instead of calling the dimension rule delivered (a downstream impl of the
+  unsealed trait defeats it); the typed-coefficient veto point is dropped
+  because ADR 0002 is Accepted; the delivery line cites PR #79 and the
+  missing judge verdict; no exit check changed.
