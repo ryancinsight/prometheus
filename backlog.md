@@ -45,7 +45,7 @@ otherwise; no test was executed.
 - Gap (read at basis): the ladder and [ADR 0003](docs/adr/0003-release-scope-1-0.md) landed through PR #79 under `judge-required`, but no judge verdict is recorded: no commit status on PR #79's head `d78a862` or on its merge commit `6bdf5c9`, and no comments or reviews on it (hosting API read 2026-11-16). The obligation of the original item is open.
 - Outcome: an independent judge has falsified the ladder at its default-branch head and its findings are fixed or filed.
 - Acceptance: a judge verdict that did not generate the ladder maps every capability area of the ADR table and every open feature item (none open at basis) to a check or a non-goal, and finds each exit check runnable and failing without its feature; the verdict is posted on the PR carrying any fix, or on the PR that closes this item.
-- Cases the judge also tries (read as written at `basis:`, not run): (a) the `M-rate-typing` exit holds since the typed constant landed while `PROMETHEUS-RATE-DIMENSION-SEAL` (correctness, same milestone) is open: does the seal's `compile_fail` doctest join that exit, a judged ADR 0003 revision; (b) the `M-board-hygiene` exit already holds at the head (`PROMETHEUS-CHANGELOG-DRIFT` reads it so), so no check of that milestone fails at the head, which the roadmap rule asks of each milestone; the defect its item names is outside the exit.
+- Cases the judge also tries (the exits' runnable checks were not run at `basis:`): (a) the `M-rate-typing` runnable check may pass while [ADR 0003](docs/adr/0003-release-scope-1-0.md) (ADR 0003:104-105) records that a downstream impl of the unsealed trait defeats the rule: does the seal's `compile_fail` doctest join that exit, a judged ADR 0003 revision; (b) the `M-board-hygiene` exit may already hold: `PROMETHEUS-CHANGELOG-DRIFT`'s lowercase grep passes, while `CHANGELOG.md:38-39` name Leto 0.47 and, as the old bound, Eunomia 0.11, against `Cargo.toml:30` and `:25`, which the exit's wording may count as drift; the ladder judge decides which comparison the exit means and whether the exit or that grep needs fixing.
 - Next step: dispatch a judge on `backlog.md` and ADR 0003 at the fetched default head, with this acceptance, the cases above and the exit lines as its oracle.
 
 <a id="PROMETHEUS-NO-STD-TEST-TARGETS"></a>
@@ -69,6 +69,17 @@ otherwise; no test was executed.
 - Outcome: the Unreleased section states only what the manifest, the lock and ADR 0001 state, under one `Added` and one `Changed` heading, in the repository's changelog convention.
 - Acceptance: `git grep -n 'default head' CHANGELOG.md` prints nothing (the sentence wraps across two lines, so a search for `current default head` finds nothing at basis); `git grep -c '^### Added' CHANGELOG.md` prints `CHANGELOG.md:1` (`CHANGELOG.md:2` at basis); each provider version named equals the `Cargo.toml` requirement (`git grep -n 'eunomia\|leto\|aequitas\|horae' CHANGELOG.md Cargo.toml`). The first two fail at basis; the third holds at basis and guards the edit.
 - Next step: re-read each cohort statement against `Cargo.toml` and `Cargo.lock` (the ADR 0001 entry names Leto 0.47, the lock resolves leto 0.50.0), edit the entry, then run the docs and link checks of the committed gate.
+
+<a id="PROMETHEUS-ERROR-TRAITS"></a>
+## PROMETHEUS-ERROR-TRAITS — Implement Display and Error for the public error types [minor] — todo
+- priority: verification; needs: none
+- milestone: M-rate-typing.
+- basis: 620ebc9
+- scope: `src/network.rs`, `src/stoichiometry.rs`, `src/concentration.rs`, `src/species.rs`, `src/enthalpy.rs`
+- Gap (read at basis): only `RateOrderMismatch` implements `Display` and `core::error::Error` (`src/rate.rs:62-72`); `InvalidNetwork` (`src/network.rs:22`), `StateDimensionMismatch`, `InvalidConcentration`, `NonPositiveMolarMass`, `InvalidStoichiometry`, `MisshapedMasses`, `MisshapedRates` and `MisshapedEnthalpies` implement neither. PR #85 listed `InvalidNetwork` as "Filed, not changed".
+- Outcome: each type implements both traits, `Display` naming the broken invariant and the offending values.
+- Acceptance: one test per variant asserts the exact `Display` text; `git grep -n 'core::error::Error' -- src` lists nine impls (one at basis).
+- Next step: add the impls beside each type, following `src/rate.rs:62-72`.
 
 <a id="PROMETHEUS-ORDER-SIGNED-EDGE-TESTS"></a>
 ## PROMETHEUS-ORDER-SIGNED-EDGE-TESTS — Pin signed zero, infinity and subnormal bases above order 2^31 [patch] — todo
