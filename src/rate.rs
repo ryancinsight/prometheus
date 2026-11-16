@@ -18,6 +18,10 @@ use aequitas::systems::si::dimensions::{
 use aequitas::systems::si::quantities::{MolarConcentration, ReactionRate, ReciprocalTime};
 use eunomia::RealField;
 
+mod dimension;
+
+pub use dimension::RateConstantDimension;
+
 /// A reaction order: the non-negative integer exponent on one species
 /// concentration in the mass-action product.
 pub type Order = u32;
