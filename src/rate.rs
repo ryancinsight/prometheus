@@ -71,6 +71,66 @@ impl core::fmt::Display for RateOrderMismatch {
 
 impl core::error::Error for RateOrderMismatch {}
 
+/// A rate constant whose reaction order was read from its dimension.
+///
+/// Built from a typed [`Quantity`] whose dimension implements
+/// [`RateConstantDimension`], it erases the order-dependent dimension into a
+/// runtime order so that constants of different orders can share one
+/// container, such as the reaction list of a network. A dimension outside the
+/// range
+/// [`RateConstantDimension`] admits does not convert:
+///
+/// ```compile_fail,E0271
+/// # use aequitas::Quantity;
+/// # use aequitas::dimension::{BaseSemantics, Dimension};
+/// # use prometheus::rate::RateConstant;
+/// # use typenum::{N1, N3, Negate, PInt, Prod, Shleft, Sum, U1, U2, U32, Z0};
+/// type Amount = Negate<PInt<Sum<Shleft<U1, U32>, U2>>>;
+/// type Huge = Quantity<f64, Dimension<Prod<Amount, N3>, Z0, N1, Z0, Z0, Amount, Z0, BaseSemantics>>;
+/// let _ = RateConstant::from(Huge::from_base(1.0));
+/// ```
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct RateConstant<T> {
+    coefficient: T,
+    order: i32,
+}
+
+impl<T> RateConstant<T> {
+    /// Overall reaction order this constant is dimensioned for.
+    #[must_use]
+    pub const fn order(&self) -> i32 {
+        self.order
+    }
+}
+
+impl<T: Copy> RateConstant<T> {
+    /// Scalar value in the base SI unit of its order-dependent dimension.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use aequitas::systems::si::quantities::ReciprocalTime;
+    /// use prometheus::rate::RateConstant;
+    ///
+    /// let k = RateConstant::from(ReciprocalTime::from_base(0.5_f64));
+    /// assert_eq!(k.order(), 1);
+    /// assert_eq!(k.base().to_bits(), 0.5_f64.to_bits());
+    /// ```
+    #[must_use]
+    pub const fn base(&self) -> T {
+        self.coefficient
+    }
+}
+
+impl<T, D: RateConstantDimension> From<Quantity<T, D>> for RateConstant<T> {
+    fn from(coefficient: Quantity<T, D>) -> Self {
+        Self {
+            coefficient: coefficient.into_base(),
+            order: D::ORDER,
+        }
+    }
+}
+
 /// Compare a declared overall order with the sum of the reactant orders.
 ///
 /// The sum is formed in `u64`, saturating, so no input wraps; a negative

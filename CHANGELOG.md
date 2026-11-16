@@ -11,6 +11,9 @@ All notable changes are documented here, following a keep-a-changelog shape.
   amount exponent. The exponent lies in `-(2³¹-2)` to `2³¹-1`, so the order is
   an `i32`; every other dimension has no implementation. See
   [ADR 0002](docs/adr/0002-rate-constant-typing.md).
+- `RateConstant<T>`: a rate constant that keeps its value and the reaction
+  order read from its dimension, built from a typed quantity with `.into()`.
+  See [ADR 0002](docs/adr/0002-rate-constant-typing.md).
 
 ### Changed
 

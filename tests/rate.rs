@@ -9,8 +9,8 @@
 //! The rate-constant dimension is `mol^(1-n)·m^(3n-3)·s⁻¹` for overall order
 //! `n` (`[k] = [r]/[c]^n`); a coefficient whose order differs from the sum of
 //! the reactant orders is rejected with a typed error. A dimension that is no
-//! rate constant does not compile (the `compile_fail` doctest of
-//! `mass_action_rate`).
+//! rate constant does not compile (the `compile_fail` doctests of
+//! `RateConstantDimension` and `RateConstant`).
 
 use core::any::type_name;
 use core::fmt::Debug;
@@ -20,10 +20,15 @@ use aequitas::dimension::{BaseSemantics, Dimension};
 use aequitas::systems::si::quantities::{MolarConcentration, ReactionRate, ReciprocalTime};
 use eunomia::RealField;
 use prometheus::rate::{
-    FirstOrderConstant, RateConstantDimension, RateOrderMismatch, SecondOrderConstant,
-    ThirdOrderConstant, first_order_rate, mass_action_rate,
+    FirstOrderConstant, RateConstant, RateOrderMismatch, SecondOrderConstant, ThirdOrderConstant,
+    first_order_rate, mass_action_rate,
 };
-use typenum::{N1, N3, N2147483647, P1, P2147483647, Prod, Sum, Z0};
+use typenum::{N1, N3, N6, N2147483647, P1, P2, P9, P2147483647, Prod, Sum, Z0};
+
+/// Order 4: `mol⁻³·m⁹·s⁻¹`.
+type FourthOrder = Quantity<f64, Dimension<P9, Z0, N1, Z0, Z0, N3, Z0>>;
+/// Order -1: `mol²·m⁻⁶·s⁻¹`, an order no reaction has.
+type NegativeOrder = Quantity<f64, Dimension<N6, Z0, N1, Z0, Z0, P2, Z0>>;
 
 fn conc<T: RealField>(value: f64) -> MolarConcentration<T> {
     MolarConcentration::from_base(T::from_f64(value))
@@ -116,13 +121,20 @@ fn rate_constant_order_mismatch_is_a_typed_error_at_every_scalar() {
 
 #[test]
 fn rate_constant_order_is_read_from_the_dimension() {
-    fn order<D: RateConstantDimension>(_: Quantity<f64, D>) -> i32 {
-        D::ORDER
-    }
-    assert_eq!(order(ReactionRate::from_base(1.0)), 0);
-    assert_eq!(order(FirstOrderConstant::from_base(1.0)), 1);
-    assert_eq!(order(SecondOrderConstant::from_base(1.0)), 2);
-    assert_eq!(order(ThirdOrderConstant::from_base(1.0)), 3);
+    let order = |constant: RateConstant<f64>| constant.order();
+    assert_eq!(order(ReactionRate::from_base(1.0).into()), 0);
+    assert_eq!(order(FirstOrderConstant::from_base(1.0).into()), 1);
+    assert_eq!(order(SecondOrderConstant::from_base(1.0).into()), 2);
+    assert_eq!(order(ThirdOrderConstant::from_base(1.0).into()), 3);
+
+    // The value is kept in the base unit of its dimension, bit for bit.
+    let second = RateConstant::from(SecondOrderConstant::from_base(0.25_f64));
+    assert_eq!(second.base().to_bits(), 0.25_f64.to_bits());
+
+    assert_eq!(order(FourthOrder::from_base(1.0).into()), 4);
+
+    // A negative order is no reaction's order, and is still read.
+    assert_eq!(order(NegativeOrder::from_base(1.0).into()), -1);
 }
 
 /// The amount exponents at both ends of the admitted range, `-(2³¹-2)` and
