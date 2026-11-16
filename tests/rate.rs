@@ -134,16 +134,21 @@ type AtHighest =
     Dimension<Prod<HighestAmount, N3>, Z0, N1, Z0, Z0, HighestAmount, Z0, BaseSemantics>;
 
 #[test]
-fn rate_constant_order_is_exact_at_the_amount_exponent_range_edges() {
-    // `1 - N` is `i32::MAX` at the lowest exponent and `i32::MIN + 2` at the
-    // highest; `i32` holds both, so no bit of either is dropped.
-    assert_eq!(<AtLowest as RateConstantDimension>::ORDER, i32::MAX);
-    assert_eq!(<AtHighest as RateConstantDimension>::ORDER, i32::MIN + 2);
-
+fn the_order_check_holds_at_the_amount_exponent_range_edges() {
     // The greatest order drives a reaction of that order end to end.
     let k: Quantity<f64, AtLowest> = Quantity::from_base(2.0);
     let rate = mass_action_rate(k, &[(2_147_483_647, conc(1.0))]).expect("order i32::MAX");
     assert_exact(rate, 2.0);
+
+    // The least order, `i32::MIN + 2`, is no reaction's order: it equals no sum.
+    let k: Quantity<f64, AtHighest> = Quantity::from_base(2.0);
+    assert_eq!(
+        mass_action_rate(k, &[(1, conc(1.0))]).err(),
+        Some(RateOrderMismatch {
+            coefficient_order: i32::MIN + 2,
+            reactant_order: 1,
+        })
+    );
 }
 
 #[test]
