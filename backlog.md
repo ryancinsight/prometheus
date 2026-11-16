@@ -18,7 +18,7 @@ otherwise; no test was executed.
 ## M-board-hygiene (0.2.0): the changelog states the shipped cohort — needs: none
 - exit: every provider version named in `CHANGELOG.md` equals the `Cargo.toml` requirement at the head — the grep comparison fails on drift.
 <a id="M-1.0"></a>
-## Milestone M-1.0 (1.0.0): stable kinetics release (authority-gated) — needs: M-rate-typing, M-oracle-hardening, M-board-hygiene
+## M-1.0 (1.0.0): stable kinetics release (authority-gated) — needs: M-rate-typing, M-oracle-hardening, M-board-hygiene
 - exit: `cargo semver-checks`, publish dry-run, `cargo doc`, nextest/doctest green at all features, zero open correctness items. Veto: release authority sets the API-freeze contents; never forces `publish = true` without it.
 <a id="M-ecosystem"></a>
 ## M-ecosystem: consumer-owned migrations (kwavers, CFDrs) — needs: M-1.0
@@ -28,23 +28,25 @@ otherwise; no test was executed.
 ## PROMETHEUS-RATE-DIMENSION-SEAL — Seal RateConstantDimension against downstream impls [patch] — todo
 - priority: correctness; needs: none
 - milestone: M-rate-typing.
-- basis: dc23785
+- basis: 620ebc9
 - scope: `src/rate/dimension.rs`, `docs/adr/0002-rate-constant-typing.md`
 - Defect (read at basis): `pub trait RateConstantDimension { const ORDER: i32; }` has no supertrait, so a downstream `impl RateConstantDimension for Local { const ORDER: i32 = 2; }` compiles and `Local` then meets the `D: RateConstantDimension` bound of `mass_action_rate` and `RateConstant::from`: a caller-declared order tag, the design [ADR 0002](docs/adr/0002-rate-constant-typing.md) rejects. The trait docs say it is "implemented for exactly" the `mol^(1-n)·m^(3n-3)·s⁻¹` dimensions, false for such a type. The sentence "Each dimension below differs from the second-order constant in one exponent" is also false for the range-edge examples (amount and length differ) and the semantics-marker example (the marker differs).
 - Outcome: the trait is sealed (private supertrait, implemented only for the one `Dimension<…>` shape under its existing bounds); the docs state what each example varies; ADR 0002 carries a dated revision line.
 - Acceptance: a `compile_fail` doctest on the trait pinned to the code rustc reports (expected `E0277`) for `struct Local; impl RateConstantDimension for Local { const ORDER: i32 = 2; }`. That impl alone compiles at basis (no supertrait), so the doctest fails there; the existing `compile_fail` doctests and `order_*` tests stay green.
+- Exit link: whether this doctest joins the `M-rate-typing` exit is a judged ADR 0003 revision decided under `PROMETHEUS-RELEASE-LADDER`; closing this item does not wait on it.
 - Next step: add the sealed supertrait in a private module, reuse the existing bounds on its one impl, add the doctest, reword the docs, add the ADR 0002 revision line.
 
 <a id="PROMETHEUS-RELEASE-LADDER"></a>
 ## PROMETHEUS-RELEASE-LADDER — Obtain the independent judge verdict on the release ladder [patch] — todo
 - priority: verification; needs: none
 - milestone: M-1.0 (exit evidence).
-- basis: dc23785
+- basis: 620ebc9
 - scope: `docs/adr/0003-release-scope-1-0.md`, `backlog.md`
-- Gap (read at basis): the ladder and [ADR 0003](docs/adr/0003-release-scope-1-0.md) landed through PR #79 under `judge-required`, but no judge verdict is recorded: no commit status on PR #79's head or on its merge commit, and no comments or reviews on it. The obligation of the original item is open.
+- Gap (read at basis): the ladder and [ADR 0003](docs/adr/0003-release-scope-1-0.md) landed through PR #79 under `judge-required`, but no judge verdict is recorded: no commit status on PR #79's head `d78a862` or on its merge commit `6bdf5c9`, and no comments or reviews on it (hosting API read 2026-11-16). The obligation of the original item is open.
 - Outcome: an independent judge has falsified the ladder at its default-branch head and its findings are fixed or filed.
 - Acceptance: a judge verdict that did not generate the ladder maps every capability area of the ADR table and every open feature item (none open at basis) to a check or a non-goal, and finds each exit check runnable and failing without its feature; the verdict is posted on the PR carrying any fix, or on the PR that closes this item.
-- Next step: dispatch a judge on `backlog.md` and ADR 0003 at the fetched default head, with this acceptance and the exit lines as its oracle.
+- Cases the judge also tries (the exits' runnable checks were not run at `basis:`): (a) the `M-rate-typing` runnable check may pass while [ADR 0003](docs/adr/0003-release-scope-1-0.md) (ADR 0003:104-105) records that a downstream impl of the unsealed trait defeats the rule: does the seal's `compile_fail` doctest join that exit, a judged ADR 0003 revision; (b) the `M-board-hygiene` exit may already hold: `PROMETHEUS-CHANGELOG-DRIFT`'s lowercase grep passes, while `CHANGELOG.md:38-39` name Leto 0.47 and, as the old bound, Eunomia 0.11, against `Cargo.toml:30` and `:25`, which the exit's wording may count as drift; the ladder judge decides which comparison the exit means and whether the exit or that grep needs fixing.
+- Next step: dispatch a judge on `backlog.md` and ADR 0003 at the fetched default head, with this acceptance, the cases above and the exit lines as its oracle.
 
 <a id="PROMETHEUS-NO-STD-TEST-TARGETS"></a>
 ## PROMETHEUS-NO-STD-TEST-TARGETS — Build the test targets without default features [patch] — todo
@@ -67,6 +69,17 @@ otherwise; no test was executed.
 - Outcome: the Unreleased section states only what the manifest, the lock and ADR 0001 state, under one `Added` and one `Changed` heading, in the repository's changelog convention.
 - Acceptance: `git grep -n 'default head' CHANGELOG.md` prints nothing (the sentence wraps across two lines, so a search for `current default head` finds nothing at basis); `git grep -c '^### Added' CHANGELOG.md` prints `CHANGELOG.md:1` (`CHANGELOG.md:2` at basis); each provider version named equals the `Cargo.toml` requirement (`git grep -n 'eunomia\|leto\|aequitas\|horae' CHANGELOG.md Cargo.toml`). The first two fail at basis; the third holds at basis and guards the edit.
 - Next step: re-read each cohort statement against `Cargo.toml` and `Cargo.lock` (the ADR 0001 entry names Leto 0.47, the lock resolves leto 0.50.0), edit the entry, then run the docs and link checks of the committed gate.
+
+<a id="PROMETHEUS-ERROR-TRAITS"></a>
+## PROMETHEUS-ERROR-TRAITS — Implement Display and Error for the public error types [minor] — todo
+- priority: verification; needs: none
+- milestone: M-rate-typing.
+- basis: 620ebc9
+- scope: `src/network.rs`, `src/stoichiometry.rs`, `src/concentration.rs`, `src/species.rs`, `src/enthalpy.rs`
+- Gap (read at basis): only `RateOrderMismatch` implements `Display` and `core::error::Error` (`src/rate.rs:62-72`); `InvalidNetwork` (`src/network.rs:22`), `StateDimensionMismatch`, `InvalidConcentration`, `NonPositiveMolarMass`, `InvalidStoichiometry`, `MisshapedMasses`, `MisshapedRates` and `MisshapedEnthalpies` implement neither. PR #85 listed `InvalidNetwork` as "Filed, not changed".
+- Outcome: each type implements both traits, `Display` naming the broken invariant and the offending values.
+- Acceptance: one test per variant asserts the exact `Display` text; `git grep -n 'core::error::Error' -- src` lists nine impls (one at basis).
+- Next step: add the impls beside each type, following `src/rate.rs:62-72`.
 
 <a id="PROMETHEUS-ORDER-SIGNED-EDGE-TESTS"></a>
 ## PROMETHEUS-ORDER-SIGNED-EDGE-TESTS — Pin signed zero, infinity and subnormal bases above order 2^31 [patch] — todo
