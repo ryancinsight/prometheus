@@ -247,7 +247,8 @@ impl<T> RateConstant<T> {
 
 impl<T: Copy> RateConstant<T> {
     /// Scalar value in the base SI unit of its order-dependent dimension.
-    pub(crate) const fn base(&self) -> T {
+    #[must_use]
+    pub const fn base(&self) -> T {
         self.coefficient
     }
 }

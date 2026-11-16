@@ -131,6 +131,10 @@ fn rate_constant_order_is_read_from_the_dimension() {
     assert_eq!(order(SecondOrderConstant::from_base(1.0).into()), 2);
     assert_eq!(order(ThirdOrderConstant::from_base(1.0).into()), 3);
 
+    // The value is kept in the base unit of its dimension, bit for bit.
+    let second = RateConstant::from(SecondOrderConstant::from_base(0.25_f64));
+    assert_eq!(second.base().to_bits(), 0.25_f64.to_bits());
+
     assert_eq!(order(FourthOrder::from_base(1.0).into()), 4);
 
     // A negative order matches no reactant sum, the empty one included.
