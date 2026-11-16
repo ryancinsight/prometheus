@@ -10,4 +10,5 @@
 | ADR | Title | Status |
 | --- | ----- | ------ |
 | [0001](0001-provider-cohort-contract.md) | Advance the public provider cohort | Accepted |
+| [0002](0002-rate-constant-typing.md) | Check the rate-constant dimension against the reaction order | Accepted |
 | [0003](0003-release-scope-1-0.md) | Prometheus release scope for 1.0 | Accepted |

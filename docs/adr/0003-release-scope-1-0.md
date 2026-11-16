@@ -74,8 +74,8 @@ open item carries exactly one `milestone:` assignment.
 
 1. The 1.0 API-freeze contents (no source determines them; release
    authority sets them).
-2. The typed-coefficient design for `PROMETHEUS-RATE-CONSTANT-UNITS` (ADR
-   0002, reserved by that item; this ADR does not pick it).
+2. The typed-coefficient design for `PROMETHEUS-RATE-CONSTANT-UNITS`
+   (ADR 0002 records it as drafted by that item; this ADR does not pick it).
 
 ## Rejected alternatives
 
