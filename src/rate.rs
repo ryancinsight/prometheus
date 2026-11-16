@@ -135,7 +135,7 @@ impl<T, D: RateConstantDimension> From<Quantity<T, D>> for RateConstant<T> {
 ///
 /// The sum is formed in `u64`, saturating, so no input wraps; a negative
 /// declared order equals no sum.
-fn check_order(
+pub(crate) fn check_order(
     declared: i32,
     reactant_orders: impl IntoIterator<Item = Order>,
 ) -> Result<(), RateOrderMismatch> {

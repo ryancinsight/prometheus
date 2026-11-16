@@ -1,28 +1,32 @@
 //! Mass-action rate-law oracles and the rate-constant order check.
 //!
 //! Each closed form is a mass-action product asserted in SI units
-//! (`mol·m⁻³·s⁻¹`) at every shipped scalar type. The inputs are dyadic
-//! rationals whose products are exact in `f32` and `f64`, so the derived
-//! tolerance is zero: a mismatch is a wrong product or a wrong power, never
-//! rounding.
+//! (`mol·m⁻³·s⁻¹`), at every shipped scalar type. The inputs are dyadic
+//! rationals whose products are exactly representable in `f32` and `f64`, so
+//! every product is exact and the derived tolerance is zero: a mismatch is a
+//! wrong product or a wrong power, never rounding.
 //!
 //! The rate-constant dimension is `mol^(1-n)·m^(3n-3)·s⁻¹` for overall order
 //! `n` (`[k] = [r]/[c]^n`); a coefficient whose order differs from the sum of
-//! the reactant orders is rejected with a typed error. A dimension that is no
-//! rate constant does not compile (the `compile_fail` doctests of
-//! `RateConstantDimension` and `RateConstant`).
+//! the reactant orders is rejected with a typed error, directly and through
+//! `ReactionNetwork`. A dimension that is no rate constant does not compile
+//! (the `compile_fail` doctests of `RateConstantDimension` and
+//! `RateConstant`).
 
 use core::any::type_name;
 use core::fmt::Debug;
 
 use aequitas::Quantity;
 use aequitas::dimension::{BaseSemantics, Dimension};
-use aequitas::systems::si::quantities::{MolarConcentration, ReactionRate, ReciprocalTime};
+use aequitas::systems::si::quantities::{MolarConcentration, ReactionRate, ReciprocalTime, Time};
 use eunomia::RealField;
+use horae::system::ExplicitSystem;
+use horae::time::Instant;
 use prometheus::rate::{
     FirstOrderConstant, RateConstant, RateConstantDimension, RateOrderMismatch,
     SecondOrderConstant, ThirdOrderConstant, first_order_rate, mass_action_rate,
 };
+use prometheus::{InvalidNetwork, ReactionNetwork, StoichiometricMatrix};
 use typenum::{N1, N3, N6, N2147483647, P1, P2, P9, P2147483647, Prod, Sum, Z0};
 
 /// Order 4: `mol⁻³·m⁹·s⁻¹`.
@@ -133,8 +137,155 @@ fn rate_constant_order_is_read_from_the_dimension() {
 
     assert_eq!(order(FourthOrder::from_base(1.0).into()), 4);
 
-    // A negative order is no reaction's order, and is still read.
-    assert_eq!(order(NegativeOrder::from_base(1.0).into()), -1);
+    // A negative order matches no reactant sum, the empty one included.
+    let negative = RateConstant::from(NegativeOrder::from_base(1.0));
+    assert_eq!(negative.order(), -1);
+    let network = ReactionNetwork::new(
+        matrix::<f64>(1, &[(0, 0, 1.0)]),
+        vec![(negative, Vec::new())],
+    );
+    assert_eq!(
+        network.err(),
+        Some(InvalidNetwork::OrderMismatch {
+            reaction: 0,
+            mismatch: RateOrderMismatch {
+                coefficient_order: -1,
+                reactant_order: 0,
+            },
+        })
+    );
+}
+
+fn matrix<T: RealField>(
+    n_species: usize,
+    entries: &[(usize, usize, f64)],
+) -> StoichiometricMatrix<T> {
+    let n_reactions = entries.iter().map(|(_, reaction, _)| reaction + 1).max();
+    StoichiometricMatrix::try_from_entries(
+        n_species,
+        n_reactions.unwrap_or(1),
+        entries
+            .iter()
+            .map(|(species, reaction, nu)| (*species, *reaction, T::from_f64(*nu))),
+    )
+    .expect("in-range stoichiometry")
+}
+
+/// Derivative of `A -> B` (`k = 0.5 s⁻¹`, `c_A = 2`) and `2 A -> B`
+/// (`k = 0.25 m³·mol⁻¹·s⁻¹`, `c_A = 3`) in SI units: `r = 0.5·2 = 1` and
+/// `r = 0.25·3² = 2.25`, with `dC/dt = ν·r`.
+fn network_derivatives<T: RealField + Debug>() {
+    let time = Instant::new(Time::from_base(T::ZERO)).expect("finite start");
+    let mut derivative = [T::ZERO; 2];
+
+    let first = ReactionNetwork::new(
+        matrix(2, &[(0, 0, -1.0), (1, 0, 1.0)]),
+        vec![(
+            FirstOrderConstant::from_base(T::from_f64(0.5)).into(),
+            vec![(0, 1)],
+        )],
+    )
+    .expect("order 1 constant, order 1 reactants");
+    first
+        .evaluate(time, &[T::from_f64(2.0), T::ZERO], &mut derivative)
+        .expect("dimensions match");
+    let expected = [T::from_f64(-1.0), T::from_f64(1.0)];
+    assert_eq!(derivative, expected, "{}", type_name::<T>());
+
+    let second = ReactionNetwork::new(
+        matrix(2, &[(0, 0, -2.0), (1, 0, 1.0)]),
+        vec![(
+            SecondOrderConstant::from_base(T::from_f64(0.25)).into(),
+            vec![(0, 2)],
+        )],
+    )
+    .expect("order 2 constant, order 2 reactants");
+    second
+        .evaluate(time, &[T::from_f64(3.0), T::ZERO], &mut derivative)
+        .expect("dimensions match");
+    let expected = [T::from_f64(-4.5), T::from_f64(2.25)];
+    assert_eq!(derivative, expected, "{}", type_name::<T>());
+}
+
+#[test]
+fn network_rate_evaluates_closed_forms_in_si_units_at_every_scalar() {
+    network_derivatives::<f32>();
+    network_derivatives::<f64>();
+}
+
+/// A coefficient whose order differs from its reactant order sum is refused
+/// at construction, in both directions and with the index of the offending
+/// reaction, so `evaluate` is only ever reached with consistent reactions.
+fn network_rejects_wrong_orders<T: RealField>() {
+    let nu = || matrix::<T>(1, &[(0, 0, -1.0), (0, 1, -1.0)]);
+    let first = || -> RateConstant<T> { FirstOrderConstant::from_base(T::ONE).into() };
+    let second = || -> RateConstant<T> { SecondOrderConstant::from_base(T::ONE).into() };
+    let mismatch = |reaction, coefficient_order, reactant_order| {
+        Some(InvalidNetwork::OrderMismatch {
+            reaction,
+            mismatch: RateOrderMismatch {
+                coefficient_order,
+                reactant_order,
+            },
+        })
+    };
+
+    let low = ReactionNetwork::new(
+        nu(),
+        vec![(second(), vec![(0, 1)]), (second(), vec![(0, 2)])],
+    );
+    assert_eq!(low.err(), mismatch(0, 2, 1), "{}", type_name::<T>());
+    let high = ReactionNetwork::new(nu(), vec![(first(), vec![(0, 1)]), (first(), vec![(0, 2)])]);
+    assert_eq!(high.err(), mismatch(1, 1, 2), "{}", type_name::<T>());
+}
+
+#[test]
+fn network_rejects_a_rate_constant_of_the_wrong_order_at_every_scalar() {
+    network_rejects_wrong_orders::<f32>();
+    network_rejects_wrong_orders::<f64>();
+}
+
+/// A negative or non-finite coefficient is refused under its own variant. A
+/// zero coefficient builds, and `evaluate` then yields a zero derivative at a
+/// nonzero state.
+fn network_rate_constant_values<T: RealField + Debug>() {
+    let build = |value: f64| {
+        ReactionNetwork::new(
+            matrix::<T>(1, &[(0, 0, -1.0)]),
+            vec![(
+                FirstOrderConstant::from_base(T::from_f64(value)).into(),
+                vec![(0, 1)],
+            )],
+        )
+    };
+    assert_eq!(
+        build(-1.0).err(),
+        Some(InvalidNetwork::NegativeRate { reaction: 0 }),
+        "{}",
+        type_name::<T>()
+    );
+    for value in [f64::NAN, f64::INFINITY, f64::NEG_INFINITY] {
+        assert_eq!(
+            build(value).err(),
+            Some(InvalidNetwork::NonFiniteRate { reaction: 0 }),
+            "{} {value}",
+            type_name::<T>()
+        );
+    }
+
+    let network = build(0.0).expect("a zero coefficient is valid");
+    let time = Instant::new(Time::from_base(T::ZERO)).expect("finite start");
+    let mut derivative = [T::ONE];
+    network
+        .evaluate(time, &[T::from_f64(2.0)], &mut derivative)
+        .expect("dimensions match");
+    assert_eq!(derivative, [T::ZERO], "{}", type_name::<T>());
+}
+
+#[test]
+fn network_rate_constant_value_errors_name_their_variant_at_every_scalar() {
+    network_rate_constant_values::<f32>();
+    network_rate_constant_values::<f64>();
 }
 
 /// The amount exponents at both ends of the admitted range, `-(2³¹-2)` and

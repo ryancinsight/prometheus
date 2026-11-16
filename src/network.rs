@@ -13,12 +13,12 @@ use eunomia::RealField;
 use horae::system::{ExplicitSystem, ImplicitSystem};
 use horae::time::Instant;
 
-use crate::rate::{Order, mass_action_product};
+use crate::rate::{Order, RateConstant, RateOrderMismatch, check_order, mass_action_product};
 use crate::stoichiometry::StoichiometricMatrix;
 
-/// A reaction was supplied with a rate coefficient that is not finite and
-/// non-negative.
+/// A reaction network was supplied with an inconsistent reaction list.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[non_exhaustive]
 pub enum InvalidNetwork {
     /// The reaction list length differs from the matrix's reaction dimension.
     ReactionCountMismatch {
@@ -36,10 +36,23 @@ pub enum InvalidNetwork {
         /// Declared species count.
         n_species: usize,
     },
-    /// A rate coefficient was negative, `NaN`, or infinite.
+    /// A rate coefficient was `NaN` or infinite.
     NonFiniteRate {
         /// The reaction carrying the bad coefficient.
         reaction: usize,
+    },
+    /// A rate coefficient was negative.
+    NegativeRate {
+        /// The reaction carrying the bad coefficient.
+        reaction: usize,
+    },
+    /// A rate coefficient's dimension belongs to a different overall order
+    /// than the sum of its reactant orders.
+    OrderMismatch {
+        /// The reaction carrying the mismatched coefficient.
+        reaction: usize,
+        /// The coefficient's order and the reactant order sum.
+        mismatch: RateOrderMismatch,
     },
 }
 
@@ -55,17 +68,21 @@ pub struct StateDimensionMismatch {
     pub output: usize,
 }
 
+/// One reaction: its typed rate constant and its `(species, order)` reactant
+/// terms.
+pub type Reaction<T> = (RateConstant<T>, Vec<(usize, Order)>);
+
 /// A homogeneous reaction network: `dC/dt = ν · r` with mass-action rates.
 ///
-/// Each reaction carries a rate coefficient (its order-dependent scalar value)
-/// and the list of `(species, order)` reactant terms whose product the
+/// Each reaction carries a typed [`RateConstant`] (its value and the overall
+/// order its dimension belongs to) and the list of `(species, order)` reactant terms whose product the
 /// coefficient scales. The derivative is the net production over the
 /// stoichiometric matrix, computed allocation-free by accumulating directly
 /// into the derivative slice.
 #[derive(Clone, Debug)]
 pub struct ReactionNetwork<T: RealField> {
     stoichiometry: StoichiometricMatrix<T>,
-    reactions: Vec<(T, Vec<(usize, Order)>)>,
+    reactions: Vec<Reaction<T>>,
 }
 
 impl<T: RealField> ReactionNetwork<T> {
@@ -74,16 +91,18 @@ impl<T: RealField> ReactionNetwork<T> {
     ///
     /// `reactions[j]` is `(rate_coefficient, reactants)` where each reactant is
     /// a `(species_index, order)` pair; the coefficient is the reaction rate
-    /// constant in its order-dependent unit (`s⁻¹` first order, `m³·mol⁻¹·s⁻¹`
-    /// second order, and so on).
+    /// constant converted from its typed quantity (`s⁻¹` first order,
+    /// `m³·mol⁻¹·s⁻¹` second order, and so on), whose order must equal the sum
+    /// of the reactant orders.
     ///
     /// # Errors
     ///
     /// Returns [`InvalidNetwork`] on a reaction-count mismatch, an
-    /// out-of-range reactant index, or a non-finite rate coefficient.
+    /// out-of-range reactant index, a non-finite or negative rate coefficient,
+    /// or a coefficient whose order differs from its reactant order sum.
     pub fn new(
         stoichiometry: StoichiometricMatrix<T>,
-        reactions: Vec<(T, Vec<(usize, Order)>)>,
+        reactions: Vec<Reaction<T>>,
     ) -> Result<Self, InvalidNetwork> {
         let n_species = stoichiometry.n_species();
         let n_reactions = stoichiometry.n_reactions();
@@ -96,9 +115,18 @@ impl<T: RealField> ReactionNetwork<T> {
         }
 
         for (reaction, (coefficient, reactants)) in reactions.iter().enumerate() {
-            if !coefficient.is_finite() || *coefficient < T::ZERO {
+            let value = coefficient.base();
+            if !value.is_finite() {
                 return Err(InvalidNetwork::NonFiniteRate { reaction });
             }
+            if value < T::ZERO {
+                return Err(InvalidNetwork::NegativeRate { reaction });
+            }
+            check_order(
+                coefficient.order(),
+                reactants.iter().map(|(_, order)| *order),
+            )
+            .map_err(|mismatch| InvalidNetwork::OrderMismatch { reaction, mismatch })?;
             for (species, _) in reactants {
                 if *species >= n_species {
                     return Err(InvalidNetwork::ReactantOutOfRange {
@@ -144,7 +172,7 @@ impl<T: RealField> ExplicitSystem<T> for ReactionNetwork<T> {
         derivative.fill(T::ZERO);
         for (reaction, (coefficient, reactants)) in self.reactions.iter().enumerate() {
             let rate = mass_action_product(
-                *coefficient,
+                coefficient.base(),
                 reactants
                     .iter()
                     .map(|(species, order)| (state[*species], *order)),
@@ -185,7 +213,7 @@ impl<T: RealField> ImplicitSystem<T> for ReactionNetwork<T> {
                 // concentration. This remains defined at the zero-concentration
                 // boundary where a valid kinetic state commonly starts.
                 let derivative_rate = mass_action_product(
-                    *coefficient * T::from_f64(f64::from(*order)),
+                    coefficient.base() * T::from_f64(f64::from(*order)),
                     reactants
                         .iter()
                         .enumerate()
