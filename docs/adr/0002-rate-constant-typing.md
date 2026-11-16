@@ -4,7 +4,8 @@
 - Date: 2026-11-16
 - Item: PROMETHEUS-RATE-CONSTANT-UNITS
 - Delivery: [PR 82](https://github.com/ryancinsight/prometheus/pull/82)
-  (decisions 1 and 2); decisions 3 and 4 follow in the item's second slice.
+  (decisions 1 and 2); decisions 3 and 4 follow in the item's later PRs,
+  listed by `git log --grep='^Item: PROMETHEUS-RATE-CONSTANT-UNITS'`.
 
 ## Context
 

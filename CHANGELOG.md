@@ -4,6 +4,12 @@ All notable changes are documented here, following a keep-a-changelog shape.
 
 ## [Unreleased]
 
+### Added
+
+- `RateConstant<T>`: a rate constant that keeps its value and the reaction
+  order read from its dimension, built from a typed quantity with `.into()`.
+  See [ADR 0002](docs/adr/0002-rate-constant-typing.md).
+
 ### Changed
 
 - Check the rate-constant dimension against the reaction order in
