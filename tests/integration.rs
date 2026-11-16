@@ -14,6 +14,7 @@ use horae::integration::{
 };
 use horae::system::{ExplicitSystem, ImplicitSystem};
 use horae::time::{Instant, StepSize};
+use prometheus::rate::{FirstOrderConstant, SecondOrderConstant, ThirdOrderConstant};
 use prometheus::{ReactionNetwork, StoichiometricMatrix};
 
 fn assert_close(actual: f64, expected: f64, tolerance: f64) {
@@ -102,9 +103,12 @@ fn robertson() -> ReactionNetwork<f64> {
     ReactionNetwork::new(
         nu,
         vec![
-            (0.04, vec![(0, 1)]),
-            (3e7, vec![(1, 2)]),
-            (1e4, vec![(1, 1), (2, 1)]),
+            (FirstOrderConstant::from_base(0.04).into(), vec![(0, 1)]),
+            (SecondOrderConstant::from_base(3e7).into(), vec![(1, 2)]),
+            (
+                SecondOrderConstant::from_base(1e4).into(),
+                vec![(1, 1), (2, 1)],
+            ),
         ],
     )
     .expect("valid Robertson network")
@@ -115,7 +119,11 @@ fn first_order_decay_matches_closed_form() {
     // A -> B: d[A]/dt = -k[A], so c_A(t) = c_A0 exp(-k t).
     let nu = StoichiometricMatrix::<f64>::try_from_entries(2, 1, [(0, 0, -1.0), (1, 0, 1.0)])
         .expect("in-range stoichiometry");
-    let network = ReactionNetwork::new(nu, vec![(1.0, vec![(0, 1)])]).expect("valid network");
+    let network = ReactionNetwork::new(
+        nu,
+        vec![(FirstOrderConstant::from_base(1.0).into(), vec![(0, 1)])],
+    )
+    .expect("valid network");
 
     let mut state = [1.0, 0.0];
     integrate_fixed(&network, &mut state, 100, 0.01);
@@ -127,7 +135,11 @@ fn second_order_decay_matches_closed_form() {
     // 2A -> B: d[A]/dt = -2k[A]^2, so 1/c_A(t) = 1/c_A0 + 2 k t.
     let nu = StoichiometricMatrix::<f64>::try_from_entries(2, 1, [(0, 0, -2.0), (1, 0, 1.0)])
         .expect("in-range stoichiometry");
-    let network = ReactionNetwork::new(nu, vec![(1.0, vec![(0, 2)])]).expect("valid network");
+    let network = ReactionNetwork::new(
+        nu,
+        vec![(SecondOrderConstant::from_base(1.0).into(), vec![(0, 2)])],
+    )
+    .expect("valid network");
 
     let mut state = [1.0, 0.0];
     integrate_fixed(&network, &mut state, 100, 0.01);
@@ -144,8 +156,14 @@ fn reversible_equilibrium_reaches_keq() {
         [(0, 0, -1.0), (1, 0, 1.0), (0, 1, 1.0), (1, 1, -1.0)],
     )
     .expect("in-range stoichiometry");
-    let network = ReactionNetwork::new(nu, vec![(1.0, vec![(0, 1)]), (0.5, vec![(1, 1)])])
-        .expect("valid network");
+    let network = ReactionNetwork::new(
+        nu,
+        vec![
+            (FirstOrderConstant::from_base(1.0).into(), vec![(0, 1)]),
+            (FirstOrderConstant::from_base(0.5).into(), vec![(1, 1)]),
+        ],
+    )
+    .expect("valid network");
 
     let mut state = [1.0, 0.0];
     // t = 20 with k_f = 1 is many equilibration time scales; the integrator
@@ -159,7 +177,10 @@ fn network_rejects_out_of_range_reactant() {
     let nu = StoichiometricMatrix::<f64>::try_from_entries(1, 1, [(0, 0, -1.0)])
         .expect("in-range stoichiometry");
     assert!(matches!(
-        ReactionNetwork::new(nu, vec![(1.0, vec![(1, 1)])]),
+        ReactionNetwork::new(
+            nu,
+            vec![(FirstOrderConstant::from_base(1.0).into(), vec![(1, 1)])]
+        ),
         Err(prometheus::InvalidNetwork::ReactantOutOfRange {
             reaction: 0,
             species: 1,
@@ -174,7 +195,11 @@ fn rk4_recovers_fourth_order() {
     // RK4's declared fourth order: err(h) / err(h/2) = 2^4 = 16.
     let nu = StoichiometricMatrix::<f64>::try_from_entries(2, 1, [(0, 0, -1.0), (1, 0, 1.0)])
         .expect("in-range stoichiometry");
-    let network = ReactionNetwork::new(nu, vec![(1.0, vec![(0, 1)])]).expect("valid network");
+    let network = ReactionNetwork::new(
+        nu,
+        vec![(FirstOrderConstant::from_base(1.0).into(), vec![(0, 1)])],
+    )
+    .expect("valid network");
     let exact = (-1.0_f64).exp();
 
     let mut errors = [0.0_f64; 3];
@@ -277,6 +302,13 @@ fn sparse_large_network_evaluate_matches_dense_reference() {
         }
     }
 
+    // Every reaction has reactant orders 2 + 1, so its constant is third order.
+    let reactions = reactions
+        .into_iter()
+        .map(|(coefficient, reactants)| {
+            (ThirdOrderConstant::from_base(coefficient).into(), reactants)
+        })
+        .collect();
     let network = ReactionNetwork::new(nu, reactions).expect("valid sparse network");
     let start = Instant::new(Time::from_base(0.0)).expect("finite start");
     let mut derivative = vec![0.0_f64; N_SPECIES];
@@ -293,8 +325,14 @@ fn sparse_large_network_evaluate_matches_dense_reference() {
 /// stoichiometry fixture in a reaction network.
 fn water_formation() -> (ReactionNetwork<f64>, [f64; 3]) {
     let (matrix, masses) = common::water_formation::<f64>();
-    let network =
-        ReactionNetwork::new(matrix, vec![(0.5, vec![(0, 2), (1, 1)])]).expect("valid network");
+    let network = ReactionNetwork::new(
+        matrix,
+        vec![(
+            ThirdOrderConstant::from_base(0.5).into(),
+            vec![(0, 2), (1, 1)],
+        )],
+    )
+    .expect("valid network");
     (network, masses.map(|mass| *mass.as_base()))
 }
 

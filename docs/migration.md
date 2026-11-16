@@ -17,6 +17,21 @@ let rate = mass_action_rate(k, &[(1, c)]);
 let rate = mass_action_rate(k, &[(1, c)])?;
 ```
 
+`ReactionNetwork::new` takes a `RateConstant<T>` per reaction: convert the typed
+quantity with `.into()`; a bare scalar no longer compiles. Match
+`InvalidNetwork::NegativeRate` for a negative coefficient (`NonFiniteRate`
+covers only `NaN` and infinity) and add `OrderMismatch` to exhaustive matches.
+
+```ignore
+// Before
+ReactionNetwork::new(nu, vec![(0.04, vec![(0, 1)])])?;
+// After
+ReactionNetwork::new(
+    nu,
+    vec![(FirstOrderConstant::from_base(0.04).into(), vec![(0, 1)])],
+)?;
+```
+
 ## Eunomia 0.12 and Leto 0.47
 
 This release changes the nominal scalar contract used by Prometheus public

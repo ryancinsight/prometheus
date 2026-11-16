@@ -82,6 +82,55 @@ pub struct RateOrderMismatch {
     pub reactant_order: u64,
 }
 
+/// A rate constant whose reaction order was read from its dimension.
+///
+/// Built from a typed [`Quantity`] whose dimension implements
+/// [`RateConstantDimension`], it erases the order-dependent dimension into a
+/// runtime order so that constants of different orders share one container, as
+/// a `ReactionNetwork` requires.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct RateConstant<T> {
+    coefficient: T,
+    order: i32,
+}
+
+impl<T> RateConstant<T> {
+    /// Overall reaction order this constant is dimensioned for.
+    #[must_use]
+    pub const fn order(&self) -> i32 {
+        self.order
+    }
+
+    /// Compare the declared order with the sum of the reactant orders.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`RateOrderMismatch`] when the sum differs from the declared
+    /// order.
+    pub fn check_order(
+        &self,
+        reactant_orders: impl IntoIterator<Item = Order>,
+    ) -> Result<(), RateOrderMismatch> {
+        check_order(self.order, reactant_orders)
+    }
+}
+
+impl<T: Copy> RateConstant<T> {
+    /// Scalar value in the base SI unit of its order-dependent dimension.
+    pub(crate) const fn base(&self) -> T {
+        self.coefficient
+    }
+}
+
+impl<T, D: RateConstantDimension> From<Quantity<T, D>> for RateConstant<T> {
+    fn from(coefficient: Quantity<T, D>) -> Self {
+        Self {
+            coefficient: coefficient.into_base(),
+            order: D::ORDER,
+        }
+    }
+}
+
 /// Compare a declared overall order with the sum of the reactant orders.
 ///
 /// The sum is formed in `u64`, saturating, so no input wraps; a negative

@@ -17,20 +17,6 @@ was read at `basis:` unless stated otherwise; no test was executed.
 ## M-ecosystem: consumer-owned migrations (kwavers, CFDrs) — needs: M-1.0
 - exit: consumer receipts on their own boards; does not gate 1.0.
 
-<a id="PROMETHEUS-RATE-CONSTANT-UNITS"></a>
-## PROMETHEUS-RATE-CONSTANT-UNITS — Enforce the rate-constant dimension against reaction order [major] — todo
-- priority: correctness; needs: none
-- milestone: M-rate-typing.
-- basis: 0f31aca3143497e78f15065a8b4e3b674f336d73
-- scope: `src/network.rs`, `tests/rate.rs`, `tests/integration.rs`, `docs/migration.md`, `CHANGELOG.md`
-- Defect (read at basis): `ReactionNetwork` stores each coefficient as bare `T` (`src/network.rs:68`, `src/network.rs:84-87`), documented as order-dependent (`src/network.rs:75-78`), so a first-order constant with order-2 reactants builds a network. Origin: atlas `gap_audit.md`, finding of 2026-10-26.
-- Outcome: a coefficient whose dimension does not match the reaction's total order is rejected at compile time or returns a typed error, for the free function and the network.
-- Acceptance: for at least two reaction orders (for example 1 and 2) and every shipped scalar type (`f32`, `f64`), the closed-form rate is asserted in SI units (`mol·m⁻³·s⁻¹`) with a derived tolerance, and a wrong-order coefficient is rejected (`compile_fail` doctest or `matches!` on the error variant, never bare `is_err()`); the same holds through `ReactionNetwork::evaluate`.
-- API: public break, pre-1.0 leftmost-nonzero rule (0.1.0 to 0.2.0); SemVer gate [major] classification and a migration note in `docs/migration.md`.
-- Adjacent (read at basis): `ReactionNetwork::new` rejects a negative coefficient under the variant `NonFiniteRate` (`src/network.rs:99-100`) while its Rustdoc lists only non-finite coefficients (`src/network.rs:82-83`); settle with the new error shape.
-- Delivered (PR #82): ADR 0002 and the check in `mass_action_rate`. Remaining: `ReactionNetwork` stores bare `T` coefficients; migrate it to the typed `RateConstant<T>` of ADR 0002 and split `NonFiniteRate` from a negative coefficient.
-- Next step: implement ADR 0002 decisions 3 and 4 in `src/network.rs`, migrating `tests/integration.rs`.
-
 <a id="PROMETHEUS-RELEASE-LADDER"></a>
 ## PROMETHEUS-RELEASE-LADDER — Draft the release scope and milestone ladder [patch] — todo
 - priority: verification; needs: none

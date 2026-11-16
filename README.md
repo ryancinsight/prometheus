@@ -25,6 +25,12 @@ integration. Reactive-transport discretization, combustion closure,
 heterogeneous and surface reactions, plasma chemistry, electrochemistry, and
 phase equilibrium are later phases, and none is scaffolded.
 
+A rate constant is a typed aequitas quantity whose dimension encodes its
+reaction order, `mol^(1-n)·m^(3n-3)·s⁻¹` for overall order `n`. Mass-action
+rates and `ReactionNetwork` reject a constant whose order differs from the sum
+of the reactant orders with a typed error, and a quantity that is no rate
+constant does not compile ([ADR 0002](docs/adr/0002-rate-constant-typing.md)).
+
 For stiff networks, `ReactionNetwork` implements Horae's `ImplicitSystem`
 contract. It assembles the analytic mass-action Jacobian into a caller-owned
 buffer, so damped-Newton Backward Euler stepping performs no steady-state
