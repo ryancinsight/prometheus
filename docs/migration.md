@@ -8,7 +8,9 @@
 coefficient must be a rate-constant quantity (`ReactionRate`,
 `FirstOrderConstant`, `SecondOrderConstant`, `ThirdOrderConstant`, or another
 dimension `mol^(1-n)·m^(3n-3)·s⁻¹`) whose order `n` equals the sum of the
-reactant orders.
+reactant orders. A generic caller adds the bound `D: RateConstantDimension` to
+the dimension parameter of the quantity it passes; the amount exponent of such
+a dimension lies in `-(2³¹-2)` to `2³¹-1`.
 
 ```ignore
 // Before
