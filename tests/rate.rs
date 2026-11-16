@@ -28,6 +28,11 @@ use prometheus::rate::{
 use prometheus::{InvalidNetwork, ReactionNetwork, StoichiometricMatrix};
 use typenum::{N1, N3, N6, P2, P9, Z0};
 
+/// Order 4: `mol⁻³·m⁹·s⁻¹`.
+type FourthOrder = Quantity<f64, Dimension<P9, Z0, N1, Z0, Z0, N3, Z0>>;
+/// Order -1: `mol²·m⁻⁶·s⁻¹`, an order no reaction has.
+type NegativeOrder = Quantity<f64, Dimension<N6, Z0, N1, Z0, Z0, P2, Z0>>;
+
 fn conc<T: RealField>(value: f64) -> MolarConcentration<T> {
     MolarConcentration::from_base(T::from_f64(value))
 }
@@ -125,11 +130,9 @@ fn rate_constant_order_is_read_from_the_dimension() {
     assert_eq!(order(SecondOrderConstant::from_base(1.0).into()), 2);
     assert_eq!(order(ThirdOrderConstant::from_base(1.0).into()), 3);
 
-    // Order 4: mol⁻³·m⁹·s⁻¹. Order -1: mol²·m⁻⁶·s⁻¹, an order no reaction has,
-    // so it matches no reactant sum, the empty one included.
-    type FourthOrder = Quantity<f64, Dimension<P9, Z0, N1, Z0, Z0, N3, Z0>>;
-    type NegativeOrder = Quantity<f64, Dimension<N6, Z0, N1, Z0, Z0, P2, Z0>>;
     assert_eq!(order(FourthOrder::from_base(1.0).into()), 4);
+
+    // A negative order matches no reactant sum, the empty one included.
     let negative = RateConstant::from(NegativeOrder::from_base(1.0));
     assert_eq!(negative.order(), -1);
     assert_eq!(
