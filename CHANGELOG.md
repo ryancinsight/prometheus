@@ -11,10 +11,14 @@ All notable changes are documented here, following a keep-a-changelog shape.
   `mol^(1-n)·m^(3n-3)·s⁻¹` for overall order `n`; the function now returns
   `Result<ReactionRate<T>, RateOrderMismatch>`, rejects a coefficient of
   another order, and no longer compiles for a quantity that is no rate
-  constant. `ReactionNetwork::new` takes `RateConstant<T>` per reaction (built
-  from a typed quantity with `.into()`) and returns
-  `InvalidNetwork::OrderMismatch` on a mismatch; `InvalidNetwork::NonFiniteRate`
-  no longer covers negative coefficients, which are `NegativeRate`. See [ADR 0002](docs/adr/0002-rate-constant-typing.md) and the
+  constant. A rate-constant dimension has an amount exponent from `-(2³¹-2)`
+  to `2³¹-1`, so its order is an `i32`. `ReactionNetwork::new` takes
+  `RateConstant<T>` per reaction (built from a typed quantity with `.into()`)
+  and returns `InvalidNetwork::OrderMismatch` on a mismatch;
+  `InvalidNetwork::NonFiniteRate` no longer covers negative coefficients,
+  which are `NegativeRate`. This is a breaking change (0.1.0 to 0.2.0): a
+  return type, a generic bound and an enum change. See
+  [ADR 0002](docs/adr/0002-rate-constant-typing.md) and the
   [migration guide](docs/migration.md).
 - Advance the public provider cohort: Prometheus binds its scalar contract to
   Eunomia 0.12 and its sparse-storage contract to Leto 0.47, so code generic

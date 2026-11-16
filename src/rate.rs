@@ -24,7 +24,7 @@ use aequitas::systems::si::dimensions::{
 };
 use aequitas::systems::si::quantities::{MolarConcentration, ReactionRate, ReciprocalTime};
 use eunomia::RealField;
-use typenum::{Integer, N1, N3, Z0};
+use typenum::{Integer, IsGreater, IsLessOrEqual, N1, N3, N2147483647, P2147483647, True, Z0};
 
 /// A reaction order: the non-negative integer exponent on one species
 /// concentration in the mass-action product.
@@ -57,17 +57,137 @@ pub type ThirdOrderConstant<T> = Quantity<T, ThirdOrderConstantDimension>;
 /// and the base semantics marker. The overall order is `1 - N`. Every other
 /// dimension, a temperature or a [`MolarConcentration`] included, has no
 /// implementation, so it is rejected at compile time.
+///
+/// `N` lies in `-(2³¹-2) ..= 2³¹-1`, which is the range where both `N` and
+/// `1 - N` are `i32` values; an exponent outside it has no implementation
+/// instead of being read through a truncating conversion. Orders from `2³¹`
+/// upward are therefore not expressible as rate-constant dimensions.
+///
+/// Each dimension below differs from the second-order constant in one
+/// exponent and is rejected, while the constant itself is read:
+///
+/// ```
+/// # use aequitas::dimension::{BaseSemantics, Dimension};
+/// # use prometheus::rate::RateConstantDimension;
+/// # use typenum::{N1, P3, Z0};
+/// type SecondOrder = Dimension<P3, Z0, N1, Z0, Z0, N1, Z0, BaseSemantics>;
+/// assert_eq!(<SecondOrder as RateConstantDimension>::ORDER, 2);
+/// ```
+///
+/// Length `m²` where order 2 needs `m³`:
+///
+/// ```compile_fail,E0271
+/// # use aequitas::dimension::{BaseSemantics, Dimension};
+/// # use prometheus::rate::RateConstantDimension;
+/// # use typenum::{N1, P2, Z0};
+/// # fn needs<D: RateConstantDimension>() {}
+/// needs::<Dimension<P2, Z0, N1, Z0, Z0, N1, Z0, BaseSemantics>>();
+/// ```
+///
+/// A mass, current, temperature or luminosity exponent of one:
+///
+/// ```compile_fail,E0277
+/// # use aequitas::dimension::{BaseSemantics, Dimension};
+/// # use prometheus::rate::RateConstantDimension;
+/// # use typenum::{N1, P1, P3, Z0};
+/// # fn needs<D: RateConstantDimension>() {}
+/// needs::<Dimension<P3, P1, N1, Z0, Z0, N1, Z0, BaseSemantics>>();
+/// ```
+///
+/// ```compile_fail,E0277
+/// # use aequitas::dimension::{BaseSemantics, Dimension};
+/// # use prometheus::rate::RateConstantDimension;
+/// # use typenum::{N1, P1, P3, Z0};
+/// # fn needs<D: RateConstantDimension>() {}
+/// needs::<Dimension<P3, Z0, N1, P1, Z0, N1, Z0, BaseSemantics>>();
+/// ```
+///
+/// ```compile_fail,E0277
+/// # use aequitas::dimension::{BaseSemantics, Dimension};
+/// # use prometheus::rate::RateConstantDimension;
+/// # use typenum::{N1, P1, P3, Z0};
+/// # fn needs<D: RateConstantDimension>() {}
+/// needs::<Dimension<P3, Z0, N1, Z0, P1, N1, Z0, BaseSemantics>>();
+/// ```
+///
+/// ```compile_fail,E0277
+/// # use aequitas::dimension::{BaseSemantics, Dimension};
+/// # use prometheus::rate::RateConstantDimension;
+/// # use typenum::{N1, P1, P3, Z0};
+/// # fn needs<D: RateConstantDimension>() {}
+/// needs::<Dimension<P3, Z0, N1, Z0, Z0, N1, P1, BaseSemantics>>();
+/// ```
+///
+/// Time exponent `-2` instead of `-1`:
+///
+/// ```compile_fail,E0277
+/// # use aequitas::dimension::{BaseSemantics, Dimension};
+/// # use prometheus::rate::RateConstantDimension;
+/// # use typenum::{N1, N2, P3, Z0};
+/// # fn needs<D: RateConstantDimension>() {}
+/// needs::<Dimension<P3, Z0, N2, Z0, Z0, N1, Z0, BaseSemantics>>();
+/// ```
+///
+/// Right exponents under another semantics marker:
+///
+/// ```compile_fail,E0277
+/// # use aequitas::dimension::{Dimension, MolarConcentrationSemantics};
+/// # use prometheus::rate::RateConstantDimension;
+/// # use typenum::{N1, P3, Z0};
+/// # fn needs<D: RateConstantDimension>() {}
+/// needs::<Dimension<P3, Z0, N1, Z0, Z0, N1, Z0, MolarConcentrationSemantics>>();
+/// ```
+///
+/// An amount exponent of `-(2³¹-1)`, one below the range, and of `2³¹`, one
+/// above it:
+///
+/// ```compile_fail,E0271
+/// # use aequitas::dimension::{BaseSemantics, Dimension};
+/// # use prometheus::rate::RateConstantDimension;
+/// # use typenum::{N1, N2147483647, N3, Prod, Z0};
+/// # fn needs<D: RateConstantDimension>() {}
+/// type Amount = N2147483647;
+/// needs::<Dimension<Prod<Amount, N3>, Z0, N1, Z0, Z0, Amount, Z0, BaseSemantics>>();
+/// ```
+///
+/// ```compile_fail,E0271
+/// # use aequitas::dimension::{BaseSemantics, Dimension};
+/// # use prometheus::rate::RateConstantDimension;
+/// # use typenum::{N1, N3, P2147483648, Prod, Z0};
+/// # fn needs<D: RateConstantDimension>() {}
+/// type Amount = P2147483648;
+/// needs::<Dimension<Prod<Amount, N3>, Z0, N1, Z0, Z0, Amount, Z0, BaseSemantics>>();
+/// ```
+///
+/// An amount exponent of `-(2³²+2)`, whose low 32 bits read as `-2`:
+///
+/// ```compile_fail,E0271
+/// # use aequitas::dimension::{BaseSemantics, Dimension};
+/// # use prometheus::rate::RateConstantDimension;
+/// # use typenum::{N1, N3, Negate, PInt, Prod, Shleft, Sum, U1, U2, U32, Z0};
+/// # fn needs<D: RateConstantDimension>() {}
+/// type Amount = Negate<PInt<Sum<Shleft<U1, U32>, U2>>>;
+/// needs::<Dimension<Prod<Amount, N3>, Z0, N1, Z0, Z0, Amount, Z0, BaseSemantics>>();
+/// ```
 pub trait RateConstantDimension {
-    /// Overall reaction order whose rate constant has this dimension. It is
-    /// negative when the amount exponent exceeds one, an order no reaction
-    /// has.
+    /// Overall reaction order whose rate constant has this dimension: `1 - N`
+    /// for amount exponent `N`. It is negative when the amount exponent
+    /// exceeds one, an order no reaction has.
     const ORDER: i32;
 }
+
+/// Exclusive lower bound of the amount exponent: `1 - N` stays below `2³¹`.
+type AmountExponentFloor = N2147483647;
+/// Inclusive upper bound of the amount exponent: the greatest `i32`.
+type AmountExponentCeiling = P2147483647;
 
 impl<L, N> RateConstantDimension for Dimension<L, Z0, N1, Z0, Z0, N, Z0, BaseSemantics>
 where
     L: Integer,
-    N: Integer + Mul<N3, Output = L>,
+    N: Integer
+        + Mul<N3, Output = L>
+        + IsGreater<AmountExponentFloor, Output = True>
+        + IsLessOrEqual<AmountExponentCeiling, Output = True>,
 {
     const ORDER: i32 = 1 - N::I32;
 }
@@ -81,6 +201,18 @@ pub struct RateOrderMismatch {
     /// Sum of the reactant orders, saturating at `u64::MAX`.
     pub reactant_order: u64,
 }
+
+impl core::fmt::Display for RateOrderMismatch {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        write!(
+            f,
+            "rate constant of order {} cannot drive a reaction of order {}",
+            self.coefficient_order, self.reactant_order
+        )
+    }
+}
+
+impl core::error::Error for RateOrderMismatch {}
 
 /// A rate constant whose reaction order was read from its dimension.
 ///

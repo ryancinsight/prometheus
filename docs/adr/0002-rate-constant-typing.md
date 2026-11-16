@@ -44,7 +44,14 @@ automated clients and were not read.
    exponent `-1`, no other base exponent, and base semantics; `ORDER = 1 - N`.
    Every other dimension has no implementation and is rejected at compile
    time. Exponents are read through `typenum`, a new direct dependency already
-   in the lock as an `aequitas` dependency.
+   in the lock as an `aequitas` dependency. `ORDER` is an `i32`, so the amount
+   exponent is bounded at the type level by `N > -(2³¹-1)` and `N ≤ 2³¹-1`
+   (`IsGreater`, `IsLessOrEqual`), which is where `typenum`'s `I32`, built by
+   shifting, is exact and `1 - N` does not overflow. A dimension outside the
+   range has no implementation. The orders a rate-constant dimension denotes
+   are therefore `-(2³¹-2)` to `2³¹-1`; a reaction of order `2³¹` or more has
+   no rate-constant dimension, and `mass_action_rate` returns
+   `RateOrderMismatch` for it.
 2. `mass_action_rate` takes `D: RateConstantDimension` and returns
    `Result<ReactionRate<T>, RateOrderMismatch>` carrying the coefficient order
    and the reactant order sum. The sum is formed in `u64`, saturating, so no
@@ -57,14 +64,29 @@ automated clients and were not read.
    `NegativeRate` means a negative finite coefficient.
 
 The change is a public break under the pre-1.0 leftmost-nonzero rule, 0.1.0 to
-0.2.0; `docs/migration.md` gives the caller change.
+0.2.0 ([major]); `docs/migration.md` gives the caller change. The return type
+changes and a generic bound is added, and cargo-semver-checks 0.51.0 has no
+lint for either, so it reports no break; the class is set by inspection.
+
+## Revisions
+
+- 2026-11-16: the first draft read `ORDER` as `1 - N::I32` with no bound on
+  `N`. A judge built an amount exponent of `-(2³²+2)`, whose `I32` is `-2`,
+  and `ORDER` read 3; the exponent range above replaces that read. The
+  `compile_fail` doctests on `RateConstantDimension` pin every constrained
+  axis, each range edge and that exponent.
 
 ## Rejected alternatives
 
 - Type-level reaction orders: a network is a runtime list of reactions of
   different orders, built from runtime data, and one `Vec` cannot hold
   per-order types.
-- Constants for orders 0 to 3 only: narrows the shipped `u32` order range.
+- Constants for orders 0 to 3 only: narrows the shipped `u32` order range far
+  below the `2³¹` of the chosen design.
+- A wider `ORDER` (`i64`) admitting every `u32` order: no consumer has a
+  reaction of order near `2³¹`, and `i32` matches the exponent type of
+  `powi`. The same type-level bound applies at the wider range. Reopen if a
+  consumer needs an order above `i32::MAX`.
 - A caller-declared order tag, `RateConstant::new(value, order)`: it checks
   nothing about the dimension, which is the defect.
 - A `debug_assert!` or panic on mismatch: the input is caller data and
