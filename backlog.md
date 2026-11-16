@@ -6,7 +6,6 @@ owns registration and first publication and is not copied here. Items carry no
 `milestone:` until `PROMETHEUS-RELEASE-LADDER` lands a ladder. The ladder opens this board ([ADR 0003](docs/adr/0003-release-scope-1-0.md)); every item carries `milestone:`. Evidence below
 was read at `basis:` unless stated otherwise; no test was executed.
 
-<a id="PROMETHEUS-RATE-CONSTANT-UNITS"></a>
 ## M-rate-typing (0.2.0): the rate-constant dimension is enforced — needs: PROMETHEUS-RATE-CONSTANT-UNITS
 - exit: a dimensionally wrong coefficient is rejected at compile time or as a typed error, for `mass_action_rate` and `ReactionNetwork::evaluate`; runnable check `cargo nextest run --locked --all-features -- rate` plus the wrong-order rejection test — fails on a build where a first-order constant with order-2 reactants returns a rate.
 ## M-oracle-hardening (0.2.0): the network oracle and power edges are pinned — needs: none
@@ -18,6 +17,7 @@ was read at `basis:` unless stated otherwise; no test was executed.
 ## M-ecosystem: consumer-owned migrations (kwavers, CFDrs) — needs: M-1.0
 - exit: consumer receipts on their own boards; does not gate 1.0.
 
+<a id="PROMETHEUS-RATE-CONSTANT-UNITS"></a>
 ## PROMETHEUS-RATE-CONSTANT-UNITS — Enforce the rate-constant dimension against reaction order [major] — todo
 - priority: correctness; needs: none
 - milestone: M-rate-typing.
