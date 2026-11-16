@@ -3,8 +3,8 @@
 - Status: Accepted
 - Date: 2026-11-16
 - Item: PROMETHEUS-RATE-CONSTANT-UNITS
-- Delivery: [PR 82](https://github.com/ryancinsight/prometheus/pull/82)
-  (decisions 1 and 2); decisions 3 and 4 follow in the item's second slice.
+- Delivery: each decision lands with the PR that implements it; the item's
+  PRs are listed by `git log --grep='^Item: PROMETHEUS-RATE-CONSTANT-UNITS'`.
 
 ## Context
 
@@ -49,8 +49,8 @@ automated clients and were not read.
    shifting, is exact and `1 - N` does not overflow. A dimension outside the
    range has no implementation. The orders a rate-constant dimension denotes
    are therefore `-(2³¹-2)` to `2³¹-1`; a reaction of order `2³¹` or more has
-   no rate-constant dimension, and `mass_action_rate` returns
-   `RateOrderMismatch` for it.
+   no rate-constant dimension, and under decision 2 `mass_action_rate`
+   returns `RateOrderMismatch` for it.
 2. `mass_action_rate` takes `D: RateConstantDimension` and returns
    `Result<ReactionRate<T>, RateOrderMismatch>` carrying the coefficient order
    and the reactant order sum. The sum is formed in `u64`, saturating, so no
@@ -63,9 +63,10 @@ automated clients and were not read.
    `NegativeRate` means a negative finite coefficient.
 
 The change is a public break under the pre-1.0 leftmost-nonzero rule, 0.1.0 to
-0.2.0 ([major]); `docs/migration.md` gives the caller change. The return type
-changes and a generic bound is added, and cargo-semver-checks 0.51.0 has no
-lint for either, so it reports no break; the class is set by inspection.
+0.2.0 ([major]); the PR that makes each break adds its caller change to
+`docs/migration.md`. The return type changes and a generic bound is added,
+and cargo-semver-checks 0.51.0 has no lint for either, so it reports no
+break; the class is set by inspection.
 
 ## Revisions
 
