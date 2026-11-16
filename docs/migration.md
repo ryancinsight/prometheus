@@ -1,4 +1,23 @@
-# Provider cohort migration
+# Migration
+
+## Rate-constant order check
+
+`mass_action_rate` checks the rate constant against the reaction order
+([ADR 0002](adr/0002-rate-constant-typing.md)) and returns
+`Result<ReactionRate<T>, RateOrderMismatch>`: handle the error or `?` it. The
+coefficient must be a rate-constant quantity (`ReactionRate`,
+`FirstOrderConstant`, `SecondOrderConstant`, `ThirdOrderConstant`, or another
+dimension `mol^(1-n)·m^(3n-3)·s⁻¹`) whose order `n` equals the sum of the
+reactant orders. A generic caller adds the bound `D: RateConstantDimension` to
+the dimension parameter of the quantity it passes; the amount exponent of such
+a dimension lies in `-(2³¹-2)` to `2³¹-1`.
+
+```ignore
+// Before
+let rate = mass_action_rate(k, &[(1, c)]);
+// After
+let rate = mass_action_rate(k, &[(1, c)])?;
+```
 
 ## Eunomia 0.12 and Leto 0.47
 

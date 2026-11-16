@@ -1,14 +1,19 @@
 //! Mass-action reaction rates.
 //!
 //! A mass-action rate is `r = k · ∏ᵢ cᵢ^(νᵢ)`, taken over the reactants only.
-//! The rate constant `k` carries its own dimension — `s⁻¹` first order,
-//! `m³·mol⁻¹·s⁻¹` second order, and so on — so it is a *typed* aequitas
-//! quantity, never a bare scalar: a temperature or a concentration cannot be
-//! passed where a rate constant is meant (atlas ADR 0058; the anti-aliasing
-//! rule in the stack standards).
+//! With `r` in `mol·m⁻³·s⁻¹` and each `cᵢ` in `mol·m⁻³`, the overall order
+//! `n = Σᵢ νᵢ` fixes the rate-constant dimension `[k] = [r]/[c]ⁿ =
+//! mol¹⁻ⁿ·m³ⁿ⁻³·s⁻¹`: `s⁻¹` first order, `m³·mol⁻¹·s⁻¹` second order, and so
+//! on. `k` is therefore a *typed* aequitas quantity, never a bare scalar, and
+//! its dimension is checked against the reaction's total order
+//! ([ADR 0002]; atlas ADR 0058): a temperature cannot be passed where a rate
+//! constant is meant, and a first-order constant cannot drive a second-order
+//! reaction.
 //!
 //! The temperature dependence that produces `k(T)` is Proteus's contract
 //! (ADR 0055 R4) and is never reimplemented here.
+//!
+//! [ADR 0002]: https://github.com/ryancinsight/prometheus/blob/main/docs/adr/0002-rate-constant-typing.md
 
 use aequitas::Quantity;
 use aequitas::dimension::DivideDimension;
@@ -44,6 +49,49 @@ pub type SecondOrderConstant<T> = Quantity<T, SecondOrderConstantDimension>;
 /// Third-order rate constant, in m⁶·mol⁻²·s⁻¹.
 pub type ThirdOrderConstant<T> = Quantity<T, ThirdOrderConstantDimension>;
 
+/// A rate constant was dimensioned for an overall order that differs from the
+/// sum of the reactant orders.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct RateOrderMismatch {
+    /// Overall order the coefficient's dimension belongs to.
+    pub coefficient_order: i32,
+    /// Sum of the reactant orders, saturating at `u64::MAX`.
+    pub reactant_order: u64,
+}
+
+impl core::fmt::Display for RateOrderMismatch {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        write!(
+            f,
+            "rate constant of order {} cannot drive a reaction of order {}",
+            self.coefficient_order, self.reactant_order
+        )
+    }
+}
+
+impl core::error::Error for RateOrderMismatch {}
+
+/// Compare a declared overall order with the sum of the reactant orders.
+///
+/// The sum is formed in `u64`, saturating, so no input wraps; a negative
+/// declared order equals no sum.
+fn check_order(
+    declared: i32,
+    reactant_orders: impl IntoIterator<Item = Order>,
+) -> Result<(), RateOrderMismatch> {
+    let reactant_order = reactant_orders
+        .into_iter()
+        .fold(0_u64, |total, order| total.saturating_add(u64::from(order)));
+    if u64::try_from(declared).is_ok_and(|declared| declared == reactant_order) {
+        Ok(())
+    } else {
+        Err(RateOrderMismatch {
+            coefficient_order: declared,
+            reactant_order,
+        })
+    }
+}
+
 /// Compute a mass-action reaction rate: `r = k · ∏ᵢ cᵢ^(νᵢ)`.
 ///
 /// `coefficient` is the already-evaluated rate constant, typed with its
@@ -54,9 +102,14 @@ pub type ThirdOrderConstant<T> = Quantity<T, ThirdOrderConstantDimension>;
 /// mol·m⁻³·s⁻¹.
 ///
 /// A species absent from the reaction has order zero and is omitted. The
-/// coefficient's dimension must match the reaction's total order — the aliases
-/// above make that correct by construction — because the scalar product is
-/// assembled in base units and wrapped as a reaction rate.
+/// coefficient's dimension must be that of the reaction's total order
+/// `Σ νᵢ`: a dimension that is no rate constant does not compile, and one of
+/// another order returns an error.
+///
+/// # Errors
+///
+/// Returns [`RateOrderMismatch`] when the order of `coefficient`'s dimension
+/// differs from the sum of the reactant orders.
 ///
 /// # Examples
 ///
@@ -67,22 +120,52 @@ pub type ThirdOrderConstant<T> = Quantity<T, ThirdOrderConstantDimension>;
 /// // First order: A -> B, rate = k·c_A with k in s⁻¹.
 /// let k = ReciprocalTime::from_base(0.5);
 /// let c = MolarConcentration::from_base(2.0);
-/// let rate: ReactionRate<f64> = mass_action_rate(k, &[(1, c)]);
+/// let rate: ReactionRate<f64> = mass_action_rate(k, &[(1, c)])?;
+/// assert_eq!(*rate.as_base(), 1.0);
+/// # Ok::<(), prometheus::rate::RateOrderMismatch>(())
 /// ```
-pub fn mass_action_rate<T, KD>(
-    coefficient: Quantity<T, KD>,
+///
+/// A first-order constant cannot drive a second-order reaction:
+///
+/// ```
+/// use aequitas::systems::si::quantities::{MolarConcentration, ReciprocalTime};
+/// use prometheus::rate::{RateOrderMismatch, mass_action_rate};
+///
+/// let k = ReciprocalTime::from_base(0.5);
+/// let c = MolarConcentration::from_base(2.0);
+/// assert!(matches!(
+///     mass_action_rate(k, &[(2, c)]),
+///     Err(RateOrderMismatch { coefficient_order: 1, reactant_order: 2 }),
+/// ));
+/// ```
+///
+/// A quantity that is no rate constant does not compile, where the
+/// first-order constant above does:
+///
+/// ```compile_fail
+/// use aequitas::systems::si::quantities::{MolarConcentration, Time};
+/// use prometheus::rate::mass_action_rate;
+///
+/// let not_a_constant = Time::from_base(0.5);
+/// let c = MolarConcentration::from_base(2.0);
+/// let _ = mass_action_rate(not_a_constant, &[(1, c)]);
+/// ```
+pub fn mass_action_rate<T, D>(
+    coefficient: Quantity<T, D>,
     reactants: &[(Order, MolarConcentration<T>)],
-) -> ReactionRate<T>
+) -> Result<ReactionRate<T>, RateOrderMismatch>
 where
     T: RealField,
+    D: RateConstantDimension,
 {
+    check_order(D::ORDER, reactants.iter().map(|(order, _)| *order))?;
     let factor = mass_action_product(
         *coefficient.as_base(),
         reactants
             .iter()
             .map(|(order, concentration)| (*concentration.as_base(), *order)),
     );
-    ReactionRate::from_base(factor)
+    Ok(ReactionRate::from_base(factor))
 }
 
 /// First-order mass-action rate: `r = k·c`, with the result dimension derived
