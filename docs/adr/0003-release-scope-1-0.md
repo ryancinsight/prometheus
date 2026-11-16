@@ -3,7 +3,7 @@
 - Status: Accepted
 - Date: 2026-11-15
 - Item: PROMETHEUS-RELEASE-LADDER
-- Delivery: the judge-required lane PR filing this item (number recorded on merge)
+- Delivery: PR #79, merged under the `judge-required` label
 
 ## Context
 
@@ -31,7 +31,7 @@ open item carries exactly one `milestone:` assignment.
   Exit: a coefficient whose dimension does not match the reaction's total
   order is rejected at compile time or as a typed error, for
   `mass_action_rate` and `ReactionNetwork::evaluate`
-  (`PROMETHEUS-RATE-CONSTANT-UNITS`); runnable check
+  (delivered; [ADR 0002](0002-rate-constant-typing.md)); runnable check
   `cargo nextest run --locked --all-features -- rate` plus the wrong-order
   rejection test (a `compile_fail` doctest or `matches!` on the error
   variant) — the check fails on a build where a first-order constant with
@@ -74,14 +74,14 @@ open item carries exactly one `milestone:` assignment.
 
 1. The 1.0 API-freeze contents (no source determines them; release
    authority sets them).
-2. The typed-coefficient design for `PROMETHEUS-RATE-CONSTANT-UNITS`
-   (ADR 0002 records it as drafted by that item; this ADR does not pick it).
+2. The typed-coefficient design (ADR 0002 records it; this ADR does not
+   pick it).
 
 ## Rejected alternatives
 
-- Freezing 1.0 on the current untyped coefficient: the defect in
-  `PROMETHEUS-RATE-CONSTANT-UNITS` lets a dimensionally wrong network
-  compile, which a 1.0 stability promise cannot cover.
+- Freezing 1.0 on the untyped coefficient: the defect ADR 0002 closes let a
+  dimensionally wrong network compile, which a 1.0 stability promise cannot
+  cover.
 - Carrying the later-phase capabilities as stretch goals inside 1.0: no
   charter authorizes them and none is scaffolded; they stay non-goals until
   a Phase 1+ charter with its own driver exists.
@@ -92,3 +92,9 @@ A consumer failure traceable to a frozen API, or a charter authorizing a
 later phase, reopens the affected milestone. The closed-form oracles in
 ADR 0058 are the tripwire: any of them failing at head overturns the
 corresponding Delivered row.
+
+## Revisions
+
+- 2026-11-16: ADR 0002 and the typed rate constant landed (PRs #84-#87), so
+  the M-rate-typing exit cites ADR 0002 and the delivery line cites PR #79
+  in place of the delivered item name; no exit check changed.
