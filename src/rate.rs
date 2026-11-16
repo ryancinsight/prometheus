@@ -79,7 +79,7 @@ impl core::error::Error for RateOrderMismatch {}
 /// a `ReactionNetwork` requires. A dimension outside the range
 /// [`RateConstantDimension`] admits does not convert:
 ///
-/// ```compile_fail,E0277
+/// ```compile_fail,E0271
 /// # use aequitas::Quantity;
 /// # use aequitas::dimension::{BaseSemantics, Dimension};
 /// # use prometheus::rate::RateConstant;
