@@ -8,20 +8,20 @@ is not copied here. Evidence below was read at `basis:` unless stated
 otherwise; no test was executed.
 
 <a id="M-rate-typing"></a>
-## Milestone M-rate-typing (0.2.0): the rate-constant dimension is enforced — needs: none
+## M-rate-typing (0.2.0): the rate-constant dimension is enforced — needs: none
 - exit: a dimensionally wrong coefficient is rejected at compile time or as a typed error, for `mass_action_rate` and `ReactionNetwork::evaluate`; runnable check `cargo nextest run --locked --all-features -- rate` plus the wrong-order rejection test — fails on a build where a first-order constant with order-2 reactants returns a rate.
 - co-evolution at release: a consumer of `mass_action_rate` or `ReactionNetwork::new` (M-ecosystem names kwavers and CFDrs) migrates to `Result<ReactionRate<T>, RateOrderMismatch>` and `RateConstant<T>` when 0.2.0 releases, per [docs/migration.md](docs/migration.md); receipts live on their boards, and the release item filed when this milestone closes carries this note.
 <a id="M-oracle-hardening"></a>
-## Milestone M-oracle-hardening (0.2.0): the network oracle and power edges are pinned — needs: none
+## M-oracle-hardening (0.2.0): the network oracle and power edges are pinned — needs: none
 - exit: narrowing delivered (PR #80: the dense reference raises each base by repetition); the `-0.0`/`-infinity`/subnormal edge tests pass and kill the `base.abs()` mutant — the remaining check fails without its fix.
 <a id="M-board-hygiene"></a>
-## Milestone M-board-hygiene (0.2.0): the changelog states the shipped cohort — needs: none
+## M-board-hygiene (0.2.0): the changelog states the shipped cohort — needs: none
 - exit: every provider version named in `CHANGELOG.md` equals the `Cargo.toml` requirement at the head — the grep comparison fails on drift.
 <a id="M-1.0"></a>
 ## Milestone M-1.0 (1.0.0): stable kinetics release (authority-gated) — needs: M-rate-typing, M-oracle-hardening, M-board-hygiene
 - exit: `cargo semver-checks`, publish dry-run, `cargo doc`, nextest/doctest green at all features, zero open correctness items. Veto: release authority sets the API-freeze contents; never forces `publish = true` without it.
 <a id="M-ecosystem"></a>
-## Milestone M-ecosystem: consumer-owned migrations (kwavers, CFDrs) — needs: M-1.0
+## M-ecosystem: consumer-owned migrations (kwavers, CFDrs) — needs: M-1.0
 - exit: consumer receipts on their own boards; does not gate 1.0.
 
 <a id="PROMETHEUS-RATE-DIMENSION-SEAL"></a>
@@ -34,6 +34,17 @@ otherwise; no test was executed.
 - Outcome: the trait is sealed (private supertrait, implemented only for the one `Dimension<…>` shape under its existing bounds); the docs state what each example varies; ADR 0002 carries a dated revision line.
 - Acceptance: a `compile_fail` doctest on the trait pinned to the code rustc reports (expected `E0277`) for `struct Local; impl RateConstantDimension for Local { const ORDER: i32 = 2; }`. That impl alone compiles at basis (no supertrait), so the doctest fails there; the existing `compile_fail` doctests and `order_*` tests stay green.
 - Next step: add the sealed supertrait in a private module, reuse the existing bounds on its one impl, add the doctest, reword the docs, add the ADR 0002 revision line.
+
+<a id="PROMETHEUS-RELEASE-LADDER"></a>
+## PROMETHEUS-RELEASE-LADDER — Obtain the independent judge verdict on the release ladder [patch] — todo
+- priority: verification; needs: none
+- milestone: M-1.0 (exit evidence).
+- basis: dc23785
+- scope: `docs/adr/0003-release-scope-1-0.md`, `backlog.md`
+- Gap (read at basis): the ladder and [ADR 0003](docs/adr/0003-release-scope-1-0.md) landed through PR #79 under `judge-required`, but no judge verdict is recorded: no commit status on PR #79's head or on its merge commit, and no comments or reviews on it. The obligation of the original item is open.
+- Outcome: an independent judge has falsified the ladder at its default-branch head and its findings are fixed or filed.
+- Acceptance: a judge verdict that did not generate the ladder maps every capability area of the ADR table and every open feature item (none open at basis) to a check or a non-goal, and finds each exit check runnable and failing without its feature; the verdict is posted on the PR carrying any fix, or on the PR that closes this item.
+- Next step: dispatch a judge on `backlog.md` and ADR 0003 at the fetched default head, with this acceptance and the exit lines as its oracle.
 
 <a id="PROMETHEUS-NO-STD-TEST-TARGETS"></a>
 ## PROMETHEUS-NO-STD-TEST-TARGETS — Build the test targets without default features [patch] — todo
@@ -54,7 +65,7 @@ otherwise; no test was executed.
 - scope: `CHANGELOG.md`
 - Defect (read at basis; the original version drift is gone, each provider version the entry names equals `Cargo.toml`): (1) the cohort entry says the lock "resolves each at its repository's current default head"; `Cargo.lock` pins `aequitas`, `eunomia`, `horae-time` and `leto` at revisions that differ from `git ls-remote <repository> HEAD` (read 2026-11-16), so the sentence is false for all four and false again after any provider commit. (2) `[Unreleased]` carries two `### Added` headings, with `### Changed` between them.
 - Outcome: the Unreleased section states only what the manifest, the lock and ADR 0001 state, under one `Added` and one `Changed` heading, in the repository's changelog convention.
-- Acceptance: `git grep -n 'current default head' CHANGELOG.md` prints nothing; `[Unreleased]` holds one `### Added` and one `### Changed`; each provider version named equals the `Cargo.toml` requirement (`git grep -n 'eunomia\|leto\|aequitas\|horae' CHANGELOG.md Cargo.toml`). The first two fail at basis.
+- Acceptance: `git grep -n 'default head' CHANGELOG.md` prints nothing (the sentence wraps across two lines, so a search for `current default head` finds nothing at basis); `git grep -c '^### Added' CHANGELOG.md` prints 1 (2 at basis); each provider version named equals the `Cargo.toml` requirement (`git grep -n 'eunomia\|leto\|aequitas\|horae' CHANGELOG.md Cargo.toml`). The first two fail at basis; the third holds at basis and guards the edit.
 - Next step: re-read each cohort statement against `Cargo.toml` and `Cargo.lock` (the ADR 0001 entry names Leto 0.47, the lock resolves leto 0.50.0), edit the entry, then run the docs and link checks of the committed gate.
 
 <a id="PROMETHEUS-ORDER-SIGNED-EDGE-TESTS"></a>
