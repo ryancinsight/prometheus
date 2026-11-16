@@ -13,11 +13,12 @@ use eunomia::RealField;
 use horae::system::{ExplicitSystem, ImplicitSystem};
 use horae::time::Instant;
 
-use crate::rate::{Order, RateConstant, RateOrderMismatch, mass_action_product};
+use crate::rate::{Order, RateConstant, RateOrderMismatch, check_order, mass_action_product};
 use crate::stoichiometry::StoichiometricMatrix;
 
 /// A reaction network was supplied with an inconsistent reaction list.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[non_exhaustive]
 pub enum InvalidNetwork {
     /// The reaction list length differs from the matrix's reaction dimension.
     ReactionCountMismatch {
@@ -121,9 +122,11 @@ impl<T: RealField> ReactionNetwork<T> {
             if value < T::ZERO {
                 return Err(InvalidNetwork::NegativeRate { reaction });
             }
-            coefficient
-                .check_order(reactants.iter().map(|(_, order)| *order))
-                .map_err(|mismatch| InvalidNetwork::OrderMismatch { reaction, mismatch })?;
+            check_order(
+                coefficient.order(),
+                reactants.iter().map(|(_, order)| *order),
+            )
+            .map_err(|mismatch| InvalidNetwork::OrderMismatch { reaction, mismatch })?;
             for (species, _) in reactants {
                 if *species >= n_species {
                     return Err(InvalidNetwork::ReactantOutOfRange {

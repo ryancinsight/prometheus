@@ -16,8 +16,9 @@ All notable changes are documented here, following a keep-a-changelog shape.
   `RateConstant<T>` per reaction (built from a typed quantity with `.into()`)
   and returns `InvalidNetwork::OrderMismatch` on a mismatch;
   `InvalidNetwork::NonFiniteRate` no longer covers negative coefficients,
-  which are `NegativeRate`. This is a breaking change (0.1.0 to 0.2.0): a
-  return type, a generic bound and an enum change. See
+  which are `NegativeRate`, and `InvalidNetwork` is `#[non_exhaustive]`. This
+  is a breaking change (0.1.0 to 0.2.0): a return type, a generic bound and
+  an enum change. See
   [ADR 0002](docs/adr/0002-rate-constant-typing.md) and the
   [migration guide](docs/migration.md).
 - Advance the public provider cohort: Prometheus binds its scalar contract to

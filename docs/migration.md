@@ -20,7 +20,9 @@ let rate = mass_action_rate(k, &[(1, c)])?;
 `ReactionNetwork::new` takes a `RateConstant<T>` per reaction: convert the typed
 quantity with `.into()`; a bare scalar no longer compiles. Match
 `InvalidNetwork::NegativeRate` for a negative coefficient (`NonFiniteRate`
-covers only `NaN` and infinity) and add `OrderMismatch` to exhaustive matches.
+covers only `NaN` and infinity) and `OrderMismatch` for a coefficient of
+another order. `InvalidNetwork` is `#[non_exhaustive]`, so a `match` on it
+needs a wildcard arm.
 
 ```ignore
 // Before

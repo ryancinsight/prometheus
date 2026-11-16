@@ -10,7 +10,8 @@
 //! `n` (`[k] = [r]/[c]^n`); a coefficient whose order differs from the sum of
 //! the reactant orders is rejected with a typed error, directly and through
 //! `ReactionNetwork`. A dimension that is no rate constant does not compile
-//! (the `compile_fail` doctest of `mass_action_rate`).
+//! (the `compile_fail` doctests of `RateConstantDimension` and
+//! `RateConstant`).
 
 use core::any::type_name;
 use core::fmt::Debug;
@@ -135,11 +136,18 @@ fn rate_constant_order_is_read_from_the_dimension() {
     // A negative order matches no reactant sum, the empty one included.
     let negative = RateConstant::from(NegativeOrder::from_base(1.0));
     assert_eq!(negative.order(), -1);
+    let network = ReactionNetwork::new(
+        matrix::<f64>(1, &[(0, 0, 1.0)]),
+        vec![(negative, Vec::new())],
+    );
     assert_eq!(
-        negative.check_order([]),
-        Err(RateOrderMismatch {
-            coefficient_order: -1,
-            reactant_order: 0,
+        network.err(),
+        Some(InvalidNetwork::OrderMismatch {
+            reaction: 0,
+            mismatch: RateOrderMismatch {
+                coefficient_order: -1,
+                reactant_order: 0,
+            },
         })
     );
 }
@@ -201,58 +209,79 @@ fn network_rate_evaluates_closed_forms_in_si_units_at_every_scalar() {
     network_derivatives::<f64>();
 }
 
-#[test]
-fn network_rejects_a_rate_constant_of_the_wrong_order() {
-    let nu = || matrix::<f64>(1, &[(0, 0, -1.0), (0, 1, -1.0)]);
-    let second = || SecondOrderConstant::from_base(1.0).into();
-    let first = || FirstOrderConstant::from_base(1.0).into();
+/// A coefficient whose order differs from its reactant order sum is refused
+/// at construction, in both directions and with the index of the offending
+/// reaction, so `evaluate` is only ever reached with consistent reactions.
+fn network_rejects_wrong_orders<T: RealField>() {
+    let nu = || matrix::<T>(1, &[(0, 0, -1.0), (0, 1, -1.0)]);
+    let first = || -> RateConstant<T> { FirstOrderConstant::from_base(T::ONE).into() };
+    let second = || -> RateConstant<T> { SecondOrderConstant::from_base(T::ONE).into() };
+    let mismatch = |reaction, coefficient_order, reactant_order| {
+        Some(InvalidNetwork::OrderMismatch {
+            reaction,
+            mismatch: RateOrderMismatch {
+                coefficient_order,
+                reactant_order,
+            },
+        })
+    };
 
     let low = ReactionNetwork::new(
         nu(),
         vec![(second(), vec![(0, 1)]), (second(), vec![(0, 2)])],
     );
-    assert!(matches!(
-        low,
-        Err(InvalidNetwork::OrderMismatch {
-            reaction: 0,
-            mismatch: RateOrderMismatch {
-                coefficient_order: 2,
-                reactant_order: 1,
-            },
-        })
-    ));
+    assert_eq!(low.err(), mismatch(0, 2, 1), "{}", type_name::<T>());
     let high = ReactionNetwork::new(nu(), vec![(first(), vec![(0, 1)]), (first(), vec![(0, 2)])]);
-    assert!(matches!(
-        high,
-        Err(InvalidNetwork::OrderMismatch {
-            reaction: 1,
-            mismatch: RateOrderMismatch {
-                coefficient_order: 1,
-                reactant_order: 2,
-            },
-        })
-    ));
+    assert_eq!(high.err(), mismatch(1, 1, 2), "{}", type_name::<T>());
 }
 
 #[test]
-fn network_rate_constant_value_errors_name_their_variant() {
+fn network_rejects_a_rate_constant_of_the_wrong_order_at_every_scalar() {
+    network_rejects_wrong_orders::<f32>();
+    network_rejects_wrong_orders::<f64>();
+}
+
+/// A negative or non-finite coefficient is refused under its own variant. A
+/// zero coefficient builds, and `evaluate` then yields a zero derivative at a
+/// nonzero state.
+fn network_rate_constant_values<T: RealField + Debug>() {
     let build = |value: f64| {
         ReactionNetwork::new(
-            matrix::<f64>(1, &[(0, 0, -1.0)]),
-            vec![(FirstOrderConstant::from_base(value).into(), vec![(0, 1)])],
+            matrix::<T>(1, &[(0, 0, -1.0)]),
+            vec![(
+                FirstOrderConstant::from_base(T::from_f64(value)).into(),
+                vec![(0, 1)],
+            )],
         )
     };
-    assert!(matches!(
-        build(-1.0),
-        Err(InvalidNetwork::NegativeRate { reaction: 0 })
-    ));
+    assert_eq!(
+        build(-1.0).err(),
+        Some(InvalidNetwork::NegativeRate { reaction: 0 }),
+        "{}",
+        type_name::<T>()
+    );
     for value in [f64::NAN, f64::INFINITY, f64::NEG_INFINITY] {
-        assert!(matches!(
-            build(value),
-            Err(InvalidNetwork::NonFiniteRate { reaction: 0 })
-        ));
+        assert_eq!(
+            build(value).err(),
+            Some(InvalidNetwork::NonFiniteRate { reaction: 0 }),
+            "{} {value}",
+            type_name::<T>()
+        );
     }
-    assert!(build(0.0).is_ok());
+
+    let network = build(0.0).expect("a zero coefficient is valid");
+    let time = Instant::new(Time::from_base(T::ZERO)).expect("finite start");
+    let mut derivative = [T::ONE];
+    network
+        .evaluate(time, &[T::from_f64(2.0)], &mut derivative)
+        .expect("dimensions match");
+    assert_eq!(derivative, [T::ZERO], "{}", type_name::<T>());
+}
+
+#[test]
+fn network_rate_constant_value_errors_name_their_variant_at_every_scalar() {
+    network_rate_constant_values::<f32>();
+    network_rate_constant_values::<f64>();
 }
 
 /// The amount exponents at both ends of the admitted range, `-(2³¹-2)` and

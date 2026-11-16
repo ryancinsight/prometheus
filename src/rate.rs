@@ -219,7 +219,18 @@ impl core::error::Error for RateOrderMismatch {}
 /// Built from a typed [`Quantity`] whose dimension implements
 /// [`RateConstantDimension`], it erases the order-dependent dimension into a
 /// runtime order so that constants of different orders share one container, as
-/// a `ReactionNetwork` requires.
+/// a `ReactionNetwork` requires. A dimension outside the range
+/// [`RateConstantDimension`] admits does not convert:
+///
+/// ```compile_fail,E0277
+/// # use aequitas::Quantity;
+/// # use aequitas::dimension::{BaseSemantics, Dimension};
+/// # use prometheus::rate::RateConstant;
+/// # use typenum::{N1, N3, Negate, PInt, Prod, Shleft, Sum, U1, U2, U32, Z0};
+/// type Amount = Negate<PInt<Sum<Shleft<U1, U32>, U2>>>;
+/// type Huge = Quantity<f64, Dimension<Prod<Amount, N3>, Z0, N1, Z0, Z0, Amount, Z0, BaseSemantics>>;
+/// let _ = RateConstant::from(Huge::from_base(1.0));
+/// ```
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct RateConstant<T> {
     coefficient: T,
@@ -231,19 +242,6 @@ impl<T> RateConstant<T> {
     #[must_use]
     pub const fn order(&self) -> i32 {
         self.order
-    }
-
-    /// Compare the declared order with the sum of the reactant orders.
-    ///
-    /// # Errors
-    ///
-    /// Returns [`RateOrderMismatch`] when the sum differs from the declared
-    /// order.
-    pub fn check_order(
-        &self,
-        reactant_orders: impl IntoIterator<Item = Order>,
-    ) -> Result<(), RateOrderMismatch> {
-        check_order(self.order, reactant_orders)
     }
 }
 
@@ -267,7 +265,7 @@ impl<T, D: RateConstantDimension> From<Quantity<T, D>> for RateConstant<T> {
 ///
 /// The sum is formed in `u64`, saturating, so no input wraps; a negative
 /// declared order equals no sum.
-fn check_order(
+pub(crate) fn check_order(
     declared: i32,
     reactant_orders: impl IntoIterator<Item = Order>,
 ) -> Result<(), RateOrderMismatch> {
