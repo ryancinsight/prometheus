@@ -60,7 +60,8 @@ automated clients and were not read.
    differs from the reactant sum. A mismatched network is unconstructible, so
    `evaluate` and `jacobian` run only on consistent reactions.
 4. `InvalidNetwork::NonFiniteRate` means `NaN` or infinite; a new
-   `NegativeRate` means a negative finite coefficient.
+   `NegativeRate` means a negative finite coefficient. `InvalidNetwork` is
+   `#[non_exhaustive]` from this change, so a later variant is not a break.
 
 The change is a public break under the pre-1.0 leftmost-nonzero rule, 0.1.0 to
 0.2.0 ([major]); the PR that makes each break adds its caller change to
