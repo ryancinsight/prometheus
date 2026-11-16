@@ -67,6 +67,10 @@ pub struct StateDimensionMismatch {
     pub output: usize,
 }
 
+/// One reaction: its typed rate constant and its `(species, order)` reactant
+/// terms.
+pub type Reaction<T> = (RateConstant<T>, Vec<(usize, Order)>);
+
 /// A homogeneous reaction network: `dC/dt = ν · r` with mass-action rates.
 ///
 /// Each reaction carries a typed [`RateConstant`] (its value and the overall
@@ -77,7 +81,7 @@ pub struct StateDimensionMismatch {
 #[derive(Clone, Debug)]
 pub struct ReactionNetwork<T: RealField> {
     stoichiometry: StoichiometricMatrix<T>,
-    reactions: Vec<(RateConstant<T>, Vec<(usize, Order)>)>,
+    reactions: Vec<Reaction<T>>,
 }
 
 impl<T: RealField> ReactionNetwork<T> {
@@ -97,7 +101,7 @@ impl<T: RealField> ReactionNetwork<T> {
     /// or a coefficient whose order differs from its reactant order sum.
     pub fn new(
         stoichiometry: StoichiometricMatrix<T>,
-        reactions: Vec<(RateConstant<T>, Vec<(usize, Order)>)>,
+        reactions: Vec<Reaction<T>>,
     ) -> Result<Self, InvalidNetwork> {
         let n_species = stoichiometry.n_species();
         let n_reactions = stoichiometry.n_reactions();
