@@ -32,9 +32,9 @@ open item carries exactly one `milestone:` assignment.
   Exit: a coefficient whose dimension does not match the reaction's total
   order is rejected at compile time or as a typed error, for
   `mass_action_rate` and `ReactionNetwork::evaluate`
-  (typed coefficient delivered, [ADR 0002](0002-rate-constant-typing.md);
-  a downstream impl of the unsealed dimension trait stays open as
-  `PROMETHEUS-RATE-DIMENSION-SEAL`); runnable check
+  (typed coefficient delivered and the dimension trait sealed,
+  [ADR 0002](0002-rate-constant-typing.md), the latter by PR #92);
+  runnable check
   `cargo nextest run --locked --all-features -- rate` plus the wrong-order
   rejection test (a `compile_fail` doctest or `matches!` on the error
   variant) — the check fails on a build where a first-order constant with
@@ -105,3 +105,7 @@ corresponding Delivered row.
   unsealed trait defeats it); the typed-coefficient veto point is dropped
   because ADR 0002 is Accepted; the delivery line cites PR #79 and the
   missing judge verdict; no exit check changed.
+- 2026-11-16: PR #92 sealed `RateConstantDimension`, so the M-rate-typing
+  exit parenthetical states the seal as delivered instead of naming its open
+  item; no exit check changed, and whether the seal's doctest joins the exit
+  stays with `PROMETHEUS-RELEASE-LADDER`.
