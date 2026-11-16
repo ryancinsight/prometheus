@@ -6,6 +6,13 @@ All notable changes are documented here, following a keep-a-changelog shape.
 
 ### Changed
 
+- Check the rate-constant dimension against the reaction order in
+  `mass_action_rate`. A rate constant's dimension is
+  `mol^(1-n)·m^(3n-3)·s⁻¹` for overall order `n`; the function now returns
+  `Result<ReactionRate<T>, RateOrderMismatch>`, rejects a coefficient of
+  another order, and no longer compiles for a quantity that is no rate
+  constant. See [ADR 0002](docs/adr/0002-rate-constant-typing.md) and the
+  [migration guide](docs/migration.md).
 - Advance the public provider cohort: Prometheus binds its scalar contract to
   Eunomia 0.12 and its sparse-storage contract to Leto 0.47, so code generic
   over the Eunomia 0.11 `RealField` bound no longer satisfies Prometheus's

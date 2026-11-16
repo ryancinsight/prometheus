@@ -1,74 +1,124 @@
-//! Mass-action rate-law oracles.
+//! Mass-action rate-law oracles and the rate-constant order check.
 //!
-//! Each case is a closed-form mass-action product verified at the value level;
-//! the reaction orders are the free parameters a wrong product or a wrong
-//! power would expose. The constants are typed: a first-order constant cannot
-//! be passed to a second-order product without a deliberate dimension change.
+//! Each closed form is a mass-action product asserted in SI units
+//! (`mol·m⁻³·s⁻¹`) at every shipped scalar type. The inputs are dyadic
+//! rationals whose products are exact in `f32` and `f64`, so the derived
+//! tolerance is zero: a mismatch is a wrong product or a wrong power, never
+//! rounding.
+//!
+//! The rate-constant dimension is `mol^(1-n)·m^(3n-3)·s⁻¹` for overall order
+//! `n` (`[k] = [r]/[c]^n`); a coefficient whose order differs from the sum of
+//! the reactant orders is rejected with a typed error. A dimension that is no
+//! rate constant does not compile (the `compile_fail` doctest of
+//! `mass_action_rate`).
 
-pub mod common;
+use core::any::type_name;
+use core::fmt::Debug;
 
+use aequitas::Quantity;
 use aequitas::systems::si::quantities::{MolarConcentration, ReactionRate, ReciprocalTime};
+use eunomia::RealField;
 use prometheus::rate::{
-    FirstOrderConstant, SecondOrderConstant, ThirdOrderConstant, first_order_rate, mass_action_rate,
+    FirstOrderConstant, RateConstantDimension, RateOrderMismatch, SecondOrderConstant,
+    ThirdOrderConstant, first_order_rate, mass_action_rate,
 };
 
-#[test]
-fn zeroth_order_rate_is_the_coefficient() {
-    // No participating species: the product is empty, rate = k in mol·m⁻³·s⁻¹.
-    let k = ReactionRate::from_base(3.5);
-    let rate = mass_action_rate(k, &[]);
-    common::assert_close(*rate.as_base(), 3.5);
+fn conc<T: RealField>(value: f64) -> MolarConcentration<T> {
+    MolarConcentration::from_base(T::from_f64(value))
+}
+
+fn assert_exact<T: RealField + Debug>(rate: ReactionRate<T>, expected: f64) {
+    assert_eq!(
+        *rate.as_base(),
+        T::from_f64(expected),
+        "{}",
+        type_name::<T>()
+    );
+}
+
+fn closed_forms<T: RealField + Debug>() {
+    // Zeroth order: no participating species, rate = k.
+    let zeroth = mass_action_rate(ReactionRate::from_base(T::from_f64(3.5)), &[]);
+    assert_exact(zeroth.expect("order 0 constant, no reactants"), 3.5);
+
+    // A -> B: rate = k·c_A, k in s⁻¹; the typed form agrees with the general one.
+    let k1: FirstOrderConstant<T> = ReciprocalTime::from_base(T::from_f64(0.5));
+    assert_exact(first_order_rate(k1, conc(2.0)), 1.0);
+    assert_exact(
+        mass_action_rate(k1, &[(1, conc(2.0))]).expect("order 1 constant, order 1 sum"),
+        1.0,
+    );
+
+    // 2 A -> B: rate = k·c_A², k in m³·mol⁻¹·s⁻¹.
+    let k2: SecondOrderConstant<T> = Quantity::from_base(T::from_f64(0.25));
+    assert_exact(
+        mass_action_rate(k2, &[(2, conc(3.0))]).expect("order 2 constant, order 2 sum"),
+        2.25,
+    );
+
+    // A + B -> C: orders 1 + 1 sum to 2, rate = k·c_A·c_B.
+    let k2: SecondOrderConstant<T> = Quantity::from_base(T::from_f64(0.125));
+    assert_exact(
+        mass_action_rate(k2, &[(1, conc(2.0)), (1, conc(5.0))]).expect("1 + 1 = 2"),
+        1.25,
+    );
+
+    // 3 A -> B: rate = k·c_A³, k in m⁶·mol⁻²·s⁻¹.
+    let k3: ThirdOrderConstant<T> = Quantity::from_base(T::from_f64(0.5));
+    assert_exact(
+        mass_action_rate(k3, &[(3, conc(2.0))]).expect("order 3 constant, order 3 sum"),
+        4.0,
+    );
 }
 
 #[test]
-fn first_order_rate_is_linear_and_dimension_derived() {
-    // A -> B: rate = k · c_A, k in s⁻¹.
-    let k = ReciprocalTime::from_base(0.5);
-    let c_a = MolarConcentration::from_base(2.0);
+fn mass_action_rate_matches_closed_forms_at_every_scalar() {
+    closed_forms::<f32>();
+    closed_forms::<f64>();
+}
 
-    // `first_order_rate` binds `ReciprocalTime × MolarConcentration` to
-    // `ReactionRate`, so this compiles only because the dimensions balance.
-    let rate: ReactionRate<f64> = first_order_rate(k, c_a);
-    common::assert_close(*rate.as_base(), 1.0);
+/// A mismatch is reported in both directions with both orders.
+fn mismatches<T: RealField + Debug>() {
+    let c = conc::<T>(2.0);
+    let first: FirstOrderConstant<T> = ReciprocalTime::from_base(T::ONE);
+    let second: SecondOrderConstant<T> = Quantity::from_base(T::ONE);
+    let third: ThirdOrderConstant<T> = Quantity::from_base(T::ONE);
+    let zeroth = ReactionRate::from_base(T::ONE);
+    let mismatch = |coefficient_order, reactant_order| {
+        Some(RateOrderMismatch {
+            coefficient_order,
+            reactant_order,
+        })
+    };
 
-    // The general form agrees with the typed form on the same values.
-    let general = mass_action_rate(k, &[(1, c_a)]);
-    common::assert_close(*general.as_base(), 1.0);
+    assert_eq!(mass_action_rate(first, &[(2, c)]).err(), mismatch(1, 2));
+    assert_eq!(mass_action_rate(second, &[(1, c)]).err(), mismatch(2, 1));
+    assert_eq!(mass_action_rate(first, &[]).err(), mismatch(1, 0));
+    assert_eq!(mass_action_rate(zeroth, &[(1, c)]).err(), mismatch(0, 1));
+    assert_eq!(
+        mass_action_rate(third, &[(1, c), (1, c)]).err(),
+        mismatch(3, 2)
+    );
+    // The reactant sum is formed in `u64`: two `u32::MAX` orders do not wrap.
+    assert_eq!(
+        mass_action_rate(second, &[(u32::MAX, c), (u32::MAX, c)]).err(),
+        mismatch(2, 2 * u64::from(u32::MAX))
+    );
 }
 
 #[test]
-fn second_order_self_reaction_is_quadratic() {
-    // 2 A -> B: rate = k · c_A², k in m³·mol⁻¹·s⁻¹.
-    let k = SecondOrderConstant::from_base(0.25);
-    let c_a = MolarConcentration::from_base(3.0);
-    let rate: ReactionRate<f64> = mass_action_rate(k, &[(2, c_a)]);
-    common::assert_close(*rate.as_base(), 2.25);
+fn rate_constant_order_mismatch_is_a_typed_error_at_every_scalar() {
+    mismatches::<f32>();
+    mismatches::<f64>();
 }
 
 #[test]
-fn second_order_cross_reaction_is_bilinear() {
-    // A + B -> C: rate = k · c_A · c_B.
-    let k = SecondOrderConstant::from_base(0.1);
-    let c_a = MolarConcentration::from_base(2.0);
-    let c_b = MolarConcentration::from_base(5.0);
-    let rate: ReactionRate<f64> = mass_action_rate(k, &[(1, c_a), (1, c_b)]);
-    common::assert_close(*rate.as_base(), 1.0);
-}
-
-#[test]
-fn third_order_rate_rides_a_cube() {
-    // 3 A -> B: rate = k · c_A³, exercising exponentiation past square level.
-    let k = ThirdOrderConstant::from_base(0.5);
-    let c_a = MolarConcentration::from_base(2.0);
-    let rate: ReactionRate<f64> = mass_action_rate(k, &[(3, c_a)]);
-    common::assert_close(*rate.as_base(), 4.0);
-}
-
-#[test]
-fn generic_over_scalar_instantiation() {
-    // The same law holds at f32; 0.5 · 4² = 8.0 is binary-exact.
-    let k: FirstOrderConstant<f32> = ReciprocalTime::from_base(0.5);
-    let c = MolarConcentration::from_base(4.0_f32);
-    let rate = mass_action_rate(k, &[(2, c)]);
-    assert!((*rate.as_base() - 8.0_f32).abs() <= f32::EPSILON);
+fn rate_constant_order_is_read_from_the_dimension() {
+    fn order<D: RateConstantDimension>(_: Quantity<f64, D>) -> i32 {
+        D::ORDER
+    }
+    assert_eq!(order(ReactionRate::from_base(1.0)), 0);
+    assert_eq!(order(FirstOrderConstant::from_base(1.0)), 1);
+    assert_eq!(order(SecondOrderConstant::from_base(1.0)), 2);
+    assert_eq!(order(ThirdOrderConstant::from_base(1.0)), 3);
 }
