@@ -40,7 +40,8 @@ pub use enthalpy::{MisshapedEnthalpies, heat_release};
 #[cfg(feature = "std")]
 pub use network::{InvalidNetwork, ReactionNetwork, StateDimensionMismatch};
 pub use rate::{
-    FirstOrderConstant, SecondOrderConstant, ThirdOrderConstant, first_order_rate, mass_action_rate,
+    FirstOrderConstant, RateConstantDimension, RateOrderMismatch, SecondOrderConstant,
+    ThirdOrderConstant, first_order_rate, mass_action_rate,
 };
 pub use species::{MolarMass, NonPositiveMolarMass, Species};
 #[cfg(feature = "std")]

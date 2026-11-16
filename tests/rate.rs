@@ -16,12 +16,14 @@ use core::any::type_name;
 use core::fmt::Debug;
 
 use aequitas::Quantity;
+use aequitas::dimension::{BaseSemantics, Dimension};
 use aequitas::systems::si::quantities::{MolarConcentration, ReactionRate, ReciprocalTime};
 use eunomia::RealField;
 use prometheus::rate::{
     FirstOrderConstant, RateConstantDimension, RateOrderMismatch, SecondOrderConstant,
     ThirdOrderConstant, first_order_rate, mass_action_rate,
 };
+use typenum::{N1, N3, N2147483647, P1, P2147483647, Prod, Sum, Z0};
 
 fn conc<T: RealField>(value: f64) -> MolarConcentration<T> {
     MolarConcentration::from_base(T::from_f64(value))
@@ -121,4 +123,38 @@ fn rate_constant_order_is_read_from_the_dimension() {
     assert_eq!(order(FirstOrderConstant::from_base(1.0)), 1);
     assert_eq!(order(SecondOrderConstant::from_base(1.0)), 2);
     assert_eq!(order(ThirdOrderConstant::from_base(1.0)), 3);
+}
+
+/// The amount exponents at both ends of the admitted range, `-(2³¹-2)` and
+/// `2³¹-1`, with the length exponent `-3·N` each fixes.
+type LowestAmount = Sum<N2147483647, P1>;
+type HighestAmount = P2147483647;
+type AtLowest = Dimension<Prod<LowestAmount, N3>, Z0, N1, Z0, Z0, LowestAmount, Z0, BaseSemantics>;
+type AtHighest =
+    Dimension<Prod<HighestAmount, N3>, Z0, N1, Z0, Z0, HighestAmount, Z0, BaseSemantics>;
+
+#[test]
+fn rate_constant_order_is_exact_at_the_amount_exponent_range_edges() {
+    // `1 - N` is `i32::MAX` at the lowest exponent and `i32::MIN + 2` at the
+    // highest; `i32` holds both, so no bit of either is dropped.
+    assert_eq!(<AtLowest as RateConstantDimension>::ORDER, i32::MAX);
+    assert_eq!(<AtHighest as RateConstantDimension>::ORDER, i32::MIN + 2);
+
+    // The greatest order drives a reaction of that order end to end.
+    let k: Quantity<f64, AtLowest> = Quantity::from_base(2.0);
+    let rate = mass_action_rate(k, &[(2_147_483_647, conc(1.0))]).expect("order i32::MAX");
+    assert_exact(rate, 2.0);
+}
+
+#[test]
+fn rate_order_mismatch_displays_both_orders_and_is_an_error() {
+    let mismatch = RateOrderMismatch {
+        coefficient_order: 1,
+        reactant_order: 2,
+    };
+    let error: &dyn core::error::Error = &mismatch;
+    assert_eq!(
+        error.to_string(),
+        "rate constant of order 1 cannot drive a reaction of order 2"
+    );
 }
