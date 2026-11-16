@@ -76,6 +76,16 @@ break; the class is set by inspection.
   and `ORDER` read 3; the exponent range above replaces that read. The
   `compile_fail` doctests on `RateConstantDimension` pin every constrained
   axis, each range edge and that exponent.
+- 2026-11-16: `RateConstantDimension` is sealed. Decision 1 said every other
+  dimension has no implementation, but the trait had no supertrait, so a
+  downstream `impl RateConstantDimension for Local { const ORDER: i32 = 2; }`
+  compiled and met the `D: RateConstantDimension` bound of `mass_action_rate`
+  and `RateConstant::from`: a caller-declared order, which the rejected
+  `RateConstant::new(value, order)` alternative names as the defect. A
+  private-module supertrait, implemented only for the one `Dimension<...>`
+  shape under the bounds of decision 1, closes it. Evidence: the
+  `compile_fail,E0277` doctest on the trait; the impl it rejects compiles at
+  the commit before the seal.
 
 ## Rejected alternatives
 

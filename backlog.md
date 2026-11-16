@@ -24,18 +24,6 @@ otherwise; no test was executed.
 ## M-ecosystem: consumer-owned migrations (kwavers, CFDrs) — needs: M-1.0
 - exit: consumer receipts on their own boards; does not gate 1.0.
 
-<a id="PROMETHEUS-RATE-DIMENSION-SEAL"></a>
-## PROMETHEUS-RATE-DIMENSION-SEAL — Seal RateConstantDimension against downstream impls [patch] — todo
-- priority: correctness; needs: none
-- milestone: M-rate-typing.
-- basis: 620ebc9
-- scope: `src/rate/dimension.rs`, `docs/adr/0002-rate-constant-typing.md`
-- Defect (read at basis): `pub trait RateConstantDimension { const ORDER: i32; }` has no supertrait, so a downstream `impl RateConstantDimension for Local { const ORDER: i32 = 2; }` compiles and `Local` then meets the `D: RateConstantDimension` bound of `mass_action_rate` and `RateConstant::from`: a caller-declared order tag, the design [ADR 0002](docs/adr/0002-rate-constant-typing.md) rejects. The trait docs say it is "implemented for exactly" the `mol^(1-n)·m^(3n-3)·s⁻¹` dimensions, false for such a type. The sentence "Each dimension below differs from the second-order constant in one exponent" is also false for the range-edge examples (amount and length differ) and the semantics-marker example (the marker differs).
-- Outcome: the trait is sealed (private supertrait, implemented only for the one `Dimension<…>` shape under its existing bounds); the docs state what each example varies; ADR 0002 carries a dated revision line.
-- Acceptance: a `compile_fail` doctest on the trait pinned to the code rustc reports (expected `E0277`) for `struct Local; impl RateConstantDimension for Local { const ORDER: i32 = 2; }`. That impl alone compiles at basis (no supertrait), so the doctest fails there; the existing `compile_fail` doctests and `order_*` tests stay green.
-- Exit link: whether this doctest joins the `M-rate-typing` exit is a judged ADR 0003 revision decided under `PROMETHEUS-RELEASE-LADDER`; closing this item does not wait on it.
-- Next step: add the sealed supertrait in a private module, reuse the existing bounds on its one impl, add the doctest, reword the docs, add the ADR 0002 revision line.
-
 <a id="PROMETHEUS-RELEASE-LADDER"></a>
 ## PROMETHEUS-RELEASE-LADDER — Obtain the independent judge verdict on the release ladder [patch] — todo
 - priority: verification; needs: none

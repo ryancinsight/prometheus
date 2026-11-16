@@ -15,13 +15,26 @@ use typenum::{Integer, IsGreater, IsLessOrEqual, N1, N3, N2147483647, P214748364
 /// dimension, a temperature or a `MolarConcentration` included, has no
 /// implementation, so it is rejected at compile time.
 ///
+/// The trait is sealed: its supertrait lives in a private module, so no type
+/// outside this crate can implement it and declare an order its dimension
+/// does not have ([ADR 0002](https://github.com/ryancinsight/prometheus/blob/main/docs/adr/0002-rate-constant-typing.md)).
+///
+/// ```compile_fail,E0277
+/// # use prometheus::rate::RateConstantDimension;
+/// struct Local;
+/// impl RateConstantDimension for Local {
+///     const ORDER: i32 = 2;
+/// }
+/// ```
+///
 /// `N` lies in `-(2³¹-2) ..= 2³¹-1`, which is the range where both `N` and
 /// `1 - N` are `i32` values; an exponent outside it has no implementation
 /// instead of being read through a truncating conversion. Orders from `2³¹`
 /// upward are therefore not expressible as rate-constant dimensions.
 ///
-/// Each dimension below differs from the second-order constant in one
-/// exponent and is rejected, while the constant itself is read:
+/// The second-order constant is read. Each example after it varies what its
+/// caption names, from one exponent to the range edges and the semantics
+/// marker, and is rejected:
 ///
 /// ```
 /// # use aequitas::dimension::{BaseSemantics, Dimension};
@@ -96,7 +109,8 @@ use typenum::{Integer, IsGreater, IsLessOrEqual, N1, N3, N2147483647, P214748364
 /// ```
 ///
 /// An amount exponent of `-(2³¹-1)`, one below the range, and of `2³¹`, one
-/// above it:
+/// above it, each with the length exponent `-3·N` that goes with it, so amount
+/// and length both differ from the second-order constant:
 ///
 /// ```compile_fail,E0271
 /// # use aequitas::dimension::{BaseSemantics, Dimension};
@@ -116,7 +130,8 @@ use typenum::{Integer, IsGreater, IsLessOrEqual, N1, N3, N2147483647, P214748364
 /// needs::<Dimension<Prod<Amount, N3>, Z0, N1, Z0, Z0, Amount, Z0, BaseSemantics>>();
 /// ```
 ///
-/// An amount exponent of `-(2³²+2)`, whose low 32 bits read as `-2`:
+/// An amount exponent of `-(2³²+2)`, whose low 32 bits read as `-2`, with its
+/// matching length exponent:
 ///
 /// ```compile_fail,E0271
 /// # use aequitas::dimension::{BaseSemantics, Dimension};
@@ -126,7 +141,7 @@ use typenum::{Integer, IsGreater, IsLessOrEqual, N1, N3, N2147483647, P214748364
 /// type Amount = Negate<PInt<Sum<Shleft<U1, U32>, U2>>>;
 /// needs::<Dimension<Prod<Amount, N3>, Z0, N1, Z0, Z0, Amount, Z0, BaseSemantics>>();
 /// ```
-pub trait RateConstantDimension {
+pub trait RateConstantDimension: sealed::Sealed {
     /// Overall reaction order whose rate constant has this dimension: `1 - N`
     /// for amount exponent `N`, which lies in `-(2³¹-2) ..= 2³¹-1`, so the
     /// order runs from `i32::MIN + 2` to `i32::MAX`. It is negative when the
@@ -134,10 +149,26 @@ pub trait RateConstantDimension {
     const ORDER: i32;
 }
 
+/// The supertrait that closes [`RateConstantDimension`]: the module is private,
+/// so only this crate can name `Sealed` and write an implementation of it.
+mod sealed {
+    pub trait Sealed {}
+}
+
 /// Exclusive lower bound of the amount exponent: `1 - N` stays below `2³¹`.
 type AmountExponentFloor = N2147483647;
 /// Inclusive upper bound of the amount exponent: the greatest `i32`.
 type AmountExponentCeiling = P2147483647;
+
+impl<L, N> sealed::Sealed for Dimension<L, Z0, N1, Z0, Z0, N, Z0, BaseSemantics>
+where
+    L: Integer,
+    N: Integer
+        + Mul<N3, Output = L>
+        + IsGreater<AmountExponentFloor, Output = True>
+        + IsLessOrEqual<AmountExponentCeiling, Output = True>,
+{
+}
 
 impl<L, N> RateConstantDimension for Dimension<L, Z0, N1, Z0, Z0, N, Z0, BaseSemantics>
 where

@@ -11,6 +11,9 @@ dimension `mol^(1-n)·m^(3n-3)·s⁻¹`) whose order `n` equals the sum of the
 reactant orders. A generic caller adds the bound `D: RateConstantDimension` to
 the dimension parameter of the quantity it passes; the amount exponent of such
 a dimension lies in `-(2³¹-2)` to `2³¹-1`.
+`RateConstantDimension` is sealed: a type of your own cannot implement it, so
+a coefficient reaches `mass_action_rate` only as an aequitas quantity of one of
+those dimensions.
 
 ```ignore
 // Before
