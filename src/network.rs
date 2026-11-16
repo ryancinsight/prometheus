@@ -75,10 +75,10 @@ pub type Reaction<T> = (RateConstant<T>, Vec<(usize, Order)>);
 /// A homogeneous reaction network: `dC/dt = ν · r` with mass-action rates.
 ///
 /// Each reaction carries a typed [`RateConstant`] (its value and the overall
-/// order its dimension belongs to) and the list of `(species, order)` reactant terms whose product the
-/// coefficient scales. The derivative is the net production over the
-/// stoichiometric matrix, computed allocation-free by accumulating directly
-/// into the derivative slice.
+/// order its dimension belongs to) and the list of `(species, order)` reactant
+/// terms whose product the coefficient scales. The derivative is the net
+/// production over the stoichiometric matrix, computed allocation-free by
+/// accumulating directly into the derivative slice.
 #[derive(Clone, Debug)]
 pub struct ReactionNetwork<T: RealField> {
     stoichiometry: StoichiometricMatrix<T>,

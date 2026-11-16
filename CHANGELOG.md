@@ -14,6 +14,8 @@ All notable changes are documented here, following a keep-a-changelog shape.
 - `RateConstant<T>`: a rate constant that keeps its value and the reaction
   order read from its dimension, built from a typed quantity with `.into()`.
   See [ADR 0002](docs/adr/0002-rate-constant-typing.md).
+- `network::Reaction<T>`: the `(RateConstant<T>, Vec<(usize, Order)>)` pair
+  that `ReactionNetwork::new` takes for each reaction.
 
 ### Changed
 
