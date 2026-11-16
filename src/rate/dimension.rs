@@ -128,8 +128,9 @@ use typenum::{Integer, IsGreater, IsLessOrEqual, N1, N3, N2147483647, P214748364
 /// ```
 pub trait RateConstantDimension {
     /// Overall reaction order whose rate constant has this dimension: `1 - N`
-    /// for amount exponent `N`. It is negative when the amount exponent
-    /// exceeds one, an order no reaction has.
+    /// for amount exponent `N`, which lies in `-(2³¹-2) ..= 2³¹-1`, so the
+    /// order runs from `i32::MIN + 2` to `i32::MAX`. It is negative when the
+    /// amount exponent exceeds one, an order no reaction has.
     const ORDER: i32;
 }
 
@@ -147,4 +148,43 @@ where
         + IsLessOrEqual<AmountExponentCeiling, Output = True>,
 {
     const ORDER: i32 = 1 - N::I32;
+}
+
+#[cfg(test)]
+mod tests {
+    use aequitas::Quantity;
+    use aequitas::dimension::{BaseSemantics, Dimension};
+    use aequitas::systems::si::quantities::ReactionRate;
+    use typenum::{N1, N3, N2147483647, P1, P2147483647, Prod, Sum, Z0};
+
+    use super::RateConstantDimension;
+    use crate::rate::{FirstOrderConstant, SecondOrderConstant, ThirdOrderConstant};
+
+    /// The amount exponents at both ends of the admitted range, `-(2³¹-2)` and
+    /// `2³¹-1`, with the length exponent `-3·N` each fixes.
+    type LowestAmount = Sum<N2147483647, P1>;
+    type HighestAmount = P2147483647;
+    type AtLowest =
+        Dimension<Prod<LowestAmount, N3>, Z0, N1, Z0, Z0, LowestAmount, Z0, BaseSemantics>;
+    type AtHighest =
+        Dimension<Prod<HighestAmount, N3>, Z0, N1, Z0, Z0, HighestAmount, Z0, BaseSemantics>;
+
+    #[test]
+    fn order_is_read_from_the_dimension() {
+        fn order<D: RateConstantDimension>(_: Quantity<f64, D>) -> i32 {
+            D::ORDER
+        }
+        assert_eq!(order(ReactionRate::from_base(1.0)), 0);
+        assert_eq!(order(FirstOrderConstant::from_base(1.0)), 1);
+        assert_eq!(order(SecondOrderConstant::from_base(1.0)), 2);
+        assert_eq!(order(ThirdOrderConstant::from_base(1.0)), 3);
+    }
+
+    #[test]
+    fn order_is_exact_at_the_amount_exponent_range_edges() {
+        // `1 - N` is `i32::MAX` at the lowest exponent and `i32::MIN + 2` at
+        // the highest; `i32` holds both, so no bit of either is dropped.
+        assert_eq!(<AtLowest as RateConstantDimension>::ORDER, i32::MAX);
+        assert_eq!(<AtHighest as RateConstantDimension>::ORDER, i32::MIN + 2);
+    }
 }
