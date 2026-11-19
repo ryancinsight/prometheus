@@ -4,8 +4,9 @@ version = 4
 
 [[package]]
 name = "aequitas"
-version = "0.3.2"
-source = "git+https://github.com/ryancinsight/aequitas#75a453aead7faa33ae8fd929dbff75b726afda9d"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "469b307baf5d2068d8f2952692ab1398aecfb9eb09503c17e111ce88eb527a8f"
 dependencies = [
  "eunomia",
  "typenum",
@@ -148,8 +149,9 @@ dependencies = [
 
 [[package]]
 name = "eunomia"
-version = "0.12.0"
-source = "git+https://github.com/ryancinsight/eunomia#eacd3d22c217b0f2e03e9a5e5386652505231270"
+version = "0.12.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3555339ae7116eb610fafe44da23aedf0389b58d725d75a959fed659d010f0a7"
 dependencies = [
  "bytemuck",
  "eunomia-derive",
@@ -158,8 +160,9 @@ dependencies = [
 
 [[package]]
 name = "eunomia-derive"
-version = "0.12.0"
-source = "git+https://github.com/ryancinsight/eunomia#eacd3d22c217b0f2e03e9a5e5386652505231270"
+version = "0.12.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3e01e52c26273b3cbd8f11b01c6220bb643c576943052fe48daf16ff4a69ca10"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -199,7 +202,7 @@ checksum = "ed5909b6e89a2db4456e54cd5f673791d7eca6732202bbf2a9cc504fe2f9b84a"
 [[package]]
 name = "horae-time"
 version = "0.2.2"
-source = "git+https://github.com/ryancinsight/horae#d2d3286241a46fb70c891dd80a9c8520d1474ee1"
+source = "git+https://github.com/ryancinsight/horae#fab2af7d2a39d7a231898d149f4adac1702b17be"
 dependencies = [
  "aequitas",
  "eunomia",
@@ -217,8 +220,8 @@ dependencies = [
 
 [[package]]
 name = "leto"
-version = "0.50.0"
-source = "git+https://github.com/ryancinsight/leto#6483eac33b627f43ecf0e46e3cc300ca99b78a20"
+version = "0.51.0"
+source = "git+https://github.com/ryancinsight/leto#b65e6e07cbbc0cd2ec870ed781da72751f161806"
 dependencies = [
  "aequitas",
  "eunomia",
