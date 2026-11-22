@@ -1,5 +1,15 @@
 # Prometheus Backlog
 
+<a id="prometheus-stable-qualification"></a>
+## PROMETHEUS-STABLE-QUALIFICATION — prometheus stable-release qualification [patch] — todo
+- priority: verification; milestone: M-rate-typing; basis: `c1f85070ecf0`.
+- Outcome: Enforce rate-constant dimensions at the reaction boundary. Follow the [release scope](docs/adr/0003-release-scope-1-0.md) and `M-rate-typing`.
+- Representative manifest `prometheus-kinetics 0.1.0`. Target 1.0.0. Index coverage at review: 0/1 publish-enabled workspace versions.
+- [ ] [arch] Confirm the independent release-ladder review and the error contract for rate order before changing the public API. Document the pre-1.0 caller migration.
+- [ ] [minor] Exercise mass_action_rate and ReactionNetwork::evaluate with matching and mismatched rate dimensions. Verify the expected rate, exact conservation for an analytically balanced system and the specified rejection.
+- [ ] [major] Finish oracle hardening and the no-default-feature test targets. Verify first-publication package identity and an independent consumer before stable release qualification.
+- [ ] [patch] Attach exact-revision evidence for the local exits and this member’s [Atlas qualification criteria](https://github.com/ryancinsight/atlas/blob/17b0124a7548ad81e817284afc5cb115c1d1bc78/docs/parity/repositories.json).
+
 Open items in priority order, under the milestone ladder below
 ([ADR 0003](docs/adr/0003-release-scope-1-0.md)); every item carries
 `milestone:`. The meta item `ATLAS-PROMETHEUS-PROMOTION-2026-09-03` (atlas
