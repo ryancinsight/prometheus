@@ -2,13 +2,15 @@
 
 <a id="prometheus-stable-qualification"></a>
 ## PROMETHEUS-STABLE-QUALIFICATION — prometheus stable-release qualification [patch] — todo
-- priority: verification; milestone: M-rate-typing; basis: `c1f85070ecf0`.
-- Outcome: Enforce rate-constant dimensions at the reaction boundary. Follow the [release scope](docs/adr/0003-release-scope-1-0.md) and `M-rate-typing`.
+- priority: verification; milestone: M-rate-typing; basis: `b98d17547cd3`.
+- Outcome: Enforce rate-constant dimensions at the reaction boundary. Follow the [release scope](docs/adr/0003-release-scope-1-0.md) and `M-rate-typing`. Planning targets for `prometheus-kinetics` are 0.1.1 if compatible oracle fixes land first, then 0.2.0, then 1.0.0. Verification alone can advance the current version.
 - Representative manifest `prometheus-kinetics 0.1.0`. Target 1.0.0. Index coverage at review: 0/1 publish-enabled workspace versions.
 - [ ] [arch] Confirm the independent release-ladder review and the error contract for rate order before changing the public API. Document the pre-1.0 caller migration.
 - [ ] [minor] Exercise mass_action_rate and ReactionNetwork::evaluate with matching and mismatched rate dimensions. Verify the expected rate, exact conservation for an analytically balanced system and the specified rejection.
 - [ ] [major] Finish oracle hardening and the no-default-feature test targets. Verify first-publication package identity and an independent consumer before stable release qualification.
-- [ ] [patch] Attach exact-revision evidence for the local exits and this member’s [Atlas qualification criteria](https://github.com/ryancinsight/atlas/blob/17b0124a7548ad81e817284afc5cb115c1d1bc78/docs/parity/repositories.json).
+- [ ] [patch] **0.1.1 if compatible oracle fixes land first.** Run the existing kinetics suite against a balanced reaction. Compare the rate to the analytical expression and verify stoichiometric conservation and boundary behavior at zero concentration. [Source and baseline](gap_audit.md#incremental-release-baseline).
+- [ ] [major] **0.2.0.** After rate-typing review, migrate the caller to the approved dimensional contract. Exercise matching and mismatched reaction order, the documented failure and the full network result with default features off.
+- [ ] [major] **1.0.0-beta.1 → 1.0.0-rc.1 → 1.0.0.** Freeze the supported surface at beta. A fresh consumer of the first admitted archive reproduces the reaction law and the board’s rate, oracle and cohort exits. Repeat the applicable exits on the exact RC before stable promotion. Attach exact-revision evidence for the local exits and this member’s [Atlas qualification criteria](https://github.com/ryancinsight/atlas/blob/17b0124a7548ad81e817284afc5cb115c1d1bc78/docs/parity/repositories.json).
 
 Open items in priority order, under the milestone ladder below
 ([ADR 0003](docs/adr/0003-release-scope-1-0.md)); every item carries
