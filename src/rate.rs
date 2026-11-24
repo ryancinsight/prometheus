@@ -133,8 +133,8 @@ impl<T, D: RateConstantDimension> From<Quantity<T, D>> for RateConstant<T> {
 
 /// Add one reactant order to a running sum, saturating at `u64::MAX`.
 ///
-/// A sum of `u32` orders exceeds `u64::MAX` only past `2³²` of them, so the
-/// saturation is pinned on this step rather than by iterating that many.
+/// Its own function because the sum saturates only past `2³²` orders, too
+/// many to iterate in a test.
 #[inline]
 fn accumulate_order(total: u64, order: Order) -> u64 {
     total.saturating_add(u64::from(order))
@@ -462,15 +462,13 @@ mod tests {
         let largest = u64::MAX;
         let widest = u64::from(u32::MAX);
         // `(2³² + 1)·(2³² − 1) = 2⁶⁴ − 1`: `2³² + 1` orders of `u32::MAX`
-        // sum exactly to `largest`, and one further order 3 makes the exact
-        // sum `2⁶⁴ + 2`. A wrapping sum reads that as 2, which a declared
-        // order 2 accepts; the saturated sum is `largest`. From `largest − 1`
-        // the exact sum `2⁶⁴ + 1` wraps to 1.
+        // sum exactly to `largest`; one more order 3 makes the exact sum
+        // `2⁶⁴ + 2`, which wraps to 2 (a declared order 2 accepts it) and
+        // saturates to `largest`; from `largest − 1` it wraps to 1.
         assert_eq!(accumulate_order(largest, 3), largest);
         assert_eq!(accumulate_order(largest - 1, 3), largest);
         assert_eq!(accumulate_order(largest, u32::MAX), largest);
-        // An exact fit is not saturation: `(largest − widest) + widest`, and
-        // one below it stays exact.
+        // An exact fit does not saturate, and one below it stays exact.
         assert_eq!(accumulate_order(largest - widest, u32::MAX), largest);
         assert_eq!(
             accumulate_order(largest - widest - 1, u32::MAX),
