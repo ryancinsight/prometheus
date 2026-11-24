@@ -1,4 +1,4 @@
-use super::{Order, accumulate_order, mass_action_product};
+use super::{Order, RateOrderMismatch, accumulate_order, check_order, mass_action_product};
 use eunomia::RealField;
 
 /// First order above `i32::MAX`: the least order the former narrowing
@@ -155,6 +155,22 @@ fn order_sum_saturates_at_the_largest_total() {
     assert_eq!(
         accumulate_order(largest - widest - 1, u32::MAX),
         largest - 1
+    );
+}
+
+#[test]
+fn order_sum_past_the_largest_total_is_a_mismatch() {
+    // `(2³² + 1)·(2³² − 1) = 2⁶⁴ − 1`, so `2³² + 1` orders of `u32::MAX` sum
+    // exactly to `u64::MAX` and one more order 3 makes the exact sum
+    // `2⁶⁴ + 2`. Saturated, that stays `u64::MAX`, which no declared order
+    // equals; wrapped, it is 2, which the declared order 2 would accept.
+    let orders = core::iter::repeat_n(u32::MAX, (1 << 32) + 1).chain([3]);
+    assert_eq!(
+        check_order(2, orders),
+        Err(RateOrderMismatch {
+            coefficient_order: 2,
+            reactant_order: u64::MAX,
+        })
     );
 }
 
