@@ -110,3 +110,15 @@ corresponding Delivered row.
   item; no exit check changed, and whether the seal's doctest joins the exit
   stays with `PROMETHEUS-RELEASE-LADDER`.
 - 2026-11-24: the M-board-hygiene exit no longer cites a board item id in parentheses, since an exit check names a runnable check, not an item, and PR #103 (`a7904b9`) delivered the cited item; the condition text is unchanged, so no exit check is weakened.
+- 2026-11-24: the M-oracle-hardening exit names its three runnable tests
+  (`negative_zero_base_keeps_the_parity_sign`,
+  `negative_infinite_base_keeps_the_parity_sign` and
+  `subnormal_base_underflows_to_a_parity_signed_zero`) in place of a board
+  item id in parentheses, since PR #106 delivers and deletes that item.
+  The trailing clause "the remaining check fails without its fix" is
+  dropped: PR #106 delivers the check it called remaining, and the
+  retained condition states the failure concretely (the `-0.0`/`-infinity`
+  cases fail under the `base.abs()` mutant, applied by hand at PR #106,
+  where all three named tests fail), so no exit check is weakened. The
+  `M-oracle-hardening` block in `backlog.md` keeps the earlier wording
+  until the filing sweep closes the milestone.
