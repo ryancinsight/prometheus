@@ -76,11 +76,7 @@ break; the class is set by inspection.
 
 ## Revisions
 
-- 2026-11-16: the first draft read `ORDER` as `1 - N::I32` with no bound on
-  `N`. A judge built an amount exponent of `-(2³²+2)`, whose `I32` is `-2`,
-  and `ORDER` read 3; the exponent range above replaces that read. The
-  `compile_fail` doctests on `RateConstantDimension` pin every constrained
-  axis, each range edge and that exponent.
+- 2026-11-16: bounded the amount exponent `N` to the range above, because the first draft read `ORDER` as `1 - N::I32` with no bound on `N` and a judge built an amount exponent of `-(2³²+2)`, whose `I32` is `-2`, so `ORDER` read 3; evidence: the `compile_fail` doctests on `RateConstantDimension`, which pin every constrained axis, each range edge and that exponent.
 - 2026-11-16: sealed `RateConstantDimension` with a private-module supertrait implemented only for the one `Dimension<...>` shape of decision 1, because the unsealed trait let a downstream `impl RateConstantDimension for Local { const ORDER: i32 = 2; }` meet the `D: RateConstantDimension` bound of `mass_action_rate` and `RateConstant::from`, a caller-declared order; evidence commit `ef30785` and the `compile_fail,E0277` doctest on the trait, whose impl compiles at the commit before the seal.
 
 ## Rejected alternatives
