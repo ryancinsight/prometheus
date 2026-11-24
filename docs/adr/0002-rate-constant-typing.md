@@ -42,15 +42,20 @@ automated clients and were not read.
    aequitas dimension with amount exponent `N`, length exponent `N·(-3)`, time
    exponent `-1`, no other base exponent, and base semantics; `ORDER = 1 - N`.
    Every other dimension has no implementation and is rejected at compile
-   time. Exponents are read through `typenum`, a new direct dependency already
-   in the lock as an `aequitas` dependency. `ORDER` is an `i32`, so the amount
-   exponent is bounded at the type level by `N > -(2³¹-1)` and `N ≤ 2³¹-1`
-   (`IsGreater`, `IsLessOrEqual`), which is where `typenum`'s `I32`, built by
-   shifting, is exact and `1 - N` does not overflow. A dimension outside the
-   range has no implementation. The orders a rate-constant dimension denotes
-   are therefore `-(2³¹-2)` to `2³¹-1`; a reaction of order `2³¹` or more has
-   no rate-constant dimension, and under decision 2 `mass_action_rate`
-   returns `RateOrderMismatch` for it.
+   time. The trait is sealed: its supertrait `sealed::Sealed` is in a private
+   module and is implemented only for that one `Dimension<...>` shape under
+   the bounds below (`src/rate/dimension.rs:18-19,144,152-156,163-170`), so no
+   downstream type implements the trait and declares an order its dimension
+   does not have, which the rejected `RateConstant::new(value, order)` names
+   as the defect. Exponents are read through `typenum`, a new direct
+   dependency already in the lock as an `aequitas` dependency. `ORDER` is an
+   `i32`, so the amount exponent is bounded at the type level by
+   `N > -(2³¹-1)` and `N ≤ 2³¹-1` (`IsGreater`, `IsLessOrEqual`), which is
+   where `typenum`'s `I32`, built by shifting, is exact and `1 - N` does not
+   overflow. A dimension outside the range has no implementation. The orders a
+   rate-constant dimension denotes are therefore `-(2³¹-2)` to `2³¹-1`; a
+   reaction of order `2³¹` or more has no rate-constant dimension, and under
+   decision 2 `mass_action_rate` returns `RateOrderMismatch` for it.
 2. `mass_action_rate` takes `D: RateConstantDimension` and returns
    `Result<ReactionRate<T>, RateOrderMismatch>` carrying the coefficient order
    and the reactant order sum. The sum is formed in `u64`, saturating, so no
@@ -71,21 +76,8 @@ break; the class is set by inspection.
 
 ## Revisions
 
-- 2026-11-16: the first draft read `ORDER` as `1 - N::I32` with no bound on
-  `N`. A judge built an amount exponent of `-(2³²+2)`, whose `I32` is `-2`,
-  and `ORDER` read 3; the exponent range above replaces that read. The
-  `compile_fail` doctests on `RateConstantDimension` pin every constrained
-  axis, each range edge and that exponent.
-- 2026-11-16: `RateConstantDimension` is sealed. Decision 1 said every other
-  dimension has no implementation, but the trait had no supertrait, so a
-  downstream `impl RateConstantDimension for Local { const ORDER: i32 = 2; }`
-  compiled and met the `D: RateConstantDimension` bound of `mass_action_rate`
-  and `RateConstant::from`: a caller-declared order, which the rejected
-  `RateConstant::new(value, order)` alternative names as the defect. A
-  private-module supertrait, implemented only for the one `Dimension<...>`
-  shape under the bounds of decision 1, closes it. Evidence: the
-  `compile_fail,E0277` doctest on the trait; the impl it rejects compiles at
-  the commit before the seal.
+- 2026-11-16: bounded the amount exponent `N` to the range above, because the first draft read `ORDER` as `1 - N::I32` with no bound on `N` and a judge built an amount exponent of `-(2³²+2)`, whose `I32` is `-2`, so `ORDER` read 3; evidence: the `compile_fail` doctests on `RateConstantDimension`, which pin every constrained axis, each range edge and that exponent.
+- 2026-11-16: sealed `RateConstantDimension` with a private-module supertrait implemented only for the one `Dimension<...>` shape of decision 1, because the unsealed trait let a downstream `impl RateConstantDimension for Local { const ORDER: i32 = 2; }` meet the `D: RateConstantDimension` bound of `mass_action_rate` and `RateConstant::from`, a caller-declared order; evidence commit `ef30785` and the `compile_fail,E0277` doctest on the trait, whose impl compiles at the commit before the seal.
 
 ## Rejected alternatives
 
