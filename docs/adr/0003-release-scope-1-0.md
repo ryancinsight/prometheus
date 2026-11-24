@@ -108,6 +108,4 @@ corresponding Delivered row.
   exit parenthetical states the seal as delivered instead of naming its open
   item; no exit check changed, and whether the seal's doctest joins the exit
   stays with `PROMETHEUS-RELEASE-LADDER`.
-- 2026-11-24: the M-board-hygiene exit no longer cites a board item id in
-  parentheses, since an exit check names a runnable check, not an item; the
-  check text is unchanged, so no exit check is weakened.
+- 2026-11-24: the M-board-hygiene exit no longer cites a board item id in parentheses, since an exit check names a runnable check, not an item, and PR #103 (`a7904b9`) delivered the cited item; the condition text is unchanged, so no exit check is weakened.

@@ -12,9 +12,10 @@ The registry name is `prometheus-kinetics` because `prometheus` on crates.io
 is the metrics client; the import path is restored to `prometheus` via
 `[lib] name`.
 
-Prometheus public generic types use the Eunomia 0.12 scalar contract and the
-Leto 0.47 through 0.50 sparse-storage contract. Consumers moving from the earlier
-provider line follow the [provider cohort migration](docs/migration.md); [ADR
+Prometheus public generic types use the Eunomia 0.12 scalar contract, its public
+signatures use Aequitas 0.5 quantity types, and its sparse storage is the Leto
+0.52 contract. Consumers moving from the earlier provider line follow the
+[provider cohort migration](docs/migration.md); [ADR
 0001](docs/adr/0001-provider-cohort-contract.md) records the breaking nominal
 trait transition.
 

@@ -21,11 +21,9 @@ Eunomia scalars.
 ## Decision
 
 Prometheus advances its public scalar contract and its sparse storage contract
-as one provider cohort: Eunomia and Leto move together in one breaking change.
-The present manifest line is Eunomia 0.12.1 and Leto 0.52.0
-(`Cargo.toml:25,30`). Consumers update their Eunomia bound and imports to 0.12
-and select the cohort the manifest names before using Prometheus public
-generic types.
+in one breaking change, resolving Eunomia and Leto as one coherent provider
+set. Consumers update their Eunomia bound and imports to 0.12 and select the
+cohort the manifest names before using Prometheus public generic types.
 
 No compatibility trait, forwarding wrapper, or duplicate matrix type remains.
 Those alternatives would preserve two nominal scalar contracts and split the
@@ -40,10 +38,11 @@ the same Prometheus API after their dependency graph selects the new cohort.
 
 The native consumer witness rejects the old 0.11 bound with `E0277` and accepts
 the 0.12 bound. `tests/stoichiometry.rs` retains the accepted current-bound
-case. Cargo SemVer analysis cannot render a Rustdoc verdict because rebuilding
-the historical Git baseline resolves the moving Eunomia source at 0.12; Atlas
-ADR 0069 records that limitation. Locked compilation of both revisions proves
-their selected graphs build, not that their public APIs are compatible.
+case. At the decision date Cargo SemVer analysis could not render a Rustdoc
+verdict because rebuilding the historical Git baseline resolved the then-moving
+Eunomia git source at 0.12; Atlas ADR 0069 records that limitation. Locked
+compilation of both revisions proves their selected graphs build, not that
+their public APIs are compatible.
 
 ## Rejected alternatives
 
@@ -62,7 +61,4 @@ longer exposes Eunomia-bound public types.
 
 ## Revisions
 
-- 2026-11-24: the Decision names the cohort rule and the present Leto 0.52.0
-  line instead of Leto 0.47, because the manifest requires 0.52.0
-  (`Cargo.toml:30`, advanced from 0.51.0 by PR #98, `74158ab`); the cohort
-  decision is unchanged.
+- 2026-11-24: the Context dates the Leto 0.46 to 0.47 advance to the decision date, the Decision states the cohort rule instead of Leto 0.47, and the Consequences date the SemVer limitation, because the manifest has moved on (`Cargo.toml:30` requires Leto 0.52.0 after PR #98, `74158ab`; `Cargo.toml:25` and `Cargo.lock:151-153` take Eunomia from the registry); the decision is unchanged.

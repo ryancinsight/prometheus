@@ -51,14 +51,17 @@ dependency-cohort change. The manifest requires `aequitas` 0.5.0, `eunomia`
    `VolumetricPowerDensity<T>` appear in public signatures, and an Aequitas
    line other than 0.5 supplies different nominal types, as an Eunomia line
    other than 0.12 supplies a different `RealField`. A consumer that names
-   `leto` or `horae-time` directly requires Leto 0.52 and Horae Time 0.4, the
-   lines behind `StoichiometricMatrix<T>` and the `ExplicitSystem` and
-   `ImplicitSystem` implementations of `ReactionNetwork<T>`.
+   `horae-time` directly requires Horae Time 0.4, the line behind the
+   `ExplicitSystem` and `ImplicitSystem` implementations of
+   `ReactionNetwork<T>`. The sparse storage behind `StoichiometricMatrix<T>`
+   is Leto 0.52; no Leto type appears in a public signature, so a consumer
+   that names `leto` selects the same line as cohort policy.
 2. Import `RealField` from Eunomia 0.12.
 3. Recompile generic bounds that mention `prometheus::StoichiometricMatrix<T>`
    or another Prometheus public type with `T: eunomia::RealField`.
 4. Regenerate the standalone lockfile and verify that one Eunomia, one
-   Aequitas and one Leto source each resolve throughout the consumer graph.
+   Aequitas, one Horae Time and one Leto source each resolve throughout the
+   consumer graph.
    The Prometheus lockfile takes Aequitas, Eunomia and Horae Time from the
    crates.io registry and Leto from one revision of its git repository.
 
