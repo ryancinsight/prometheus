@@ -72,6 +72,17 @@ otherwise; no test was executed.
 - Next step: add the impls beside each type, following `src/rate.rs:62-72`, and the tests in the target that already names each type (`tests/species.rs`, `tests/stoichiometry.rs`, `tests/production.rs`, `tests/enthalpy.rs`, `tests/rate.rs`). `StateDimensionMismatch` (`src/network.rs:62`, built at `:165,:198`) is named by no test target, so its test is new, in `tests/integration.rs` beside the `ReactionNetwork::evaluate` tests.
 - Open (ladder decision): `priority: verification` fits an additive public API gap poorly; the ladder judge sets the class.
 
+<a id="PROMETHEUS-ORDER-SUM-SATURATION-TEST"></a>
+## PROMETHEUS-ORDER-SUM-SATURATION-TEST — Kill the saturating_add to wrapping_add mutant in the order sum [patch] — todo
+- priority: verification; needs: none
+- milestone: M-oracle-hardening.
+- basis: d190167170c305957c266d4cbdf828eab55c685a
+- scope: `src/rate.rs` (`check_order` and module `tests`)
+- Gap: `check_order` forms the reactant order sum as `fold(0_u64, |total, order| total.saturating_add(u64::from(order)))`. A mutant replacing `saturating_add` with `wrapping_add` was reported surviving the tests before filing (not rerun here). It is not equivalent: `2^32 + 1` orders of `u32::MAX` sum to `2^64 - 1`, and one further order 3 saturates to `u64::MAX` (an error against declared order 2) but wraps to `2` (accepted).
+- Outcome: a value-semantic test pins the saturation, with a workload that fits the committed test budget.
+- Acceptance: the test asserts `Err(RateOrderMismatch { reactant_order: u64::MAX, .. })` for declared order 2; it passes at head and fails under the `saturating_add` to `wrapping_add` mutant of the order sum, applied by hand to the fold in `check_order` and to its step function, one at a time, with the failing tests recorded in the PR. Amended 2026-11-24 in PR #106 from "`cargo mutants --file src/rate.rs` reports the `wrapping_add` mutant caught": `cargo mutants --version` answers `no such command` on the gating host and no file of this repository pins or installs cargo-mutants (`git grep -i mutants` finds only this board), so no gate here can run the named command; whether cargo-mutants generates this substitution at all is unverified.
+- Next step: run `check_order(2, core::iter::repeat_n(u32::MAX, (1 << 32) + 1).chain([3]))` under nextest; if it exceeds the 30 s slow period, extract the per-order step as a function over `(u64, Order)` and assert `u64::MAX - 1` plus order 3 gives `u64::MAX`, an extraction and never a smaller workload.
+
 <a id="PROMETHEUS-DOCTEST-ERROR-CODES"></a>
 ## PROMETHEUS-DOCTEST-ERROR-CODES — Check the error codes of the compile_fail doctests [patch] — todo
 - priority: verification; needs: none
