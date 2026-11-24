@@ -47,8 +47,7 @@ open item carries exactly one `milestone:` assignment.
   its fix.
 - **M-board-hygiene** (0.2.0): the changelog states the shipped cohort.
   Exit: every provider version named in `CHANGELOG.md` equals the
-  `Cargo.toml` requirement at the head
-  (`PROMETHEUS-CHANGELOG-DRIFT`) — the grep comparison fails on drift.
+  `Cargo.toml` requirement at the head — the grep comparison fails on drift.
 - **M-1.0** (1.0.0): stable kinetics release (**authority-gated**). Exit:
   `cargo semver-checks`, publish dry-run, `cargo doc`, the full
   nextest/doctest suite green at all features, and zero open correctness
@@ -109,3 +108,4 @@ corresponding Delivered row.
   exit parenthetical states the seal as delivered instead of naming its open
   item; no exit check changed, and whether the seal's doctest joins the exit
   stays with `PROMETHEUS-RELEASE-LADDER`.
+- 2026-11-24: the M-board-hygiene exit no longer cites a board item id in parentheses, since an exit check names a runnable check, not an item, and PR #103 (`a7904b9`) delivered the cited item; the condition text is unchanged, so no exit check is weakened.
