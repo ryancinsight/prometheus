@@ -39,17 +39,28 @@ ReactionNetwork::new(
 )?;
 ```
 
-## Eunomia 0.12 and Leto 0.47
+## Provider cohort: Eunomia 0.12, Aequitas 0.5 and Leto 0.52
 
-This release changes the nominal scalar contract used by Prometheus public
-generic types. Update a consumer as one dependency-cohort change:
+Prometheus public generic types bind their scalar to Eunomia's `RealField`,
+and its public signatures use Aequitas quantity types. Update a consumer as one
+dependency-cohort change. The manifest requires `aequitas` 0.5.0, `eunomia`
+0.12.1, the optional `leto` 0.52.0 and the optional `horae-time` 0.4.0.
 
-1. Require Eunomia 0.12 and Leto 0.47 from the selected stack revisions.
+1. Require the provider lines the manifest names: Eunomia 0.12 and Aequitas
+   0.5. Quantity types such as `ReactionRate<T>`, `MolarEnergy<T>` and
+   `VolumetricPowerDensity<T>` appear in public signatures, and an Aequitas
+   line other than 0.5 supplies different nominal types, as an Eunomia line
+   other than 0.12 supplies a different `RealField`. A consumer that names
+   `leto` or `horae-time` directly requires Leto 0.52 and Horae Time 0.4, the
+   lines behind `StoichiometricMatrix<T>` and the `ExplicitSystem` and
+   `ImplicitSystem` implementations of `ReactionNetwork<T>`.
 2. Import `RealField` from Eunomia 0.12.
 3. Recompile generic bounds that mention `prometheus::StoichiometricMatrix<T>`
    or another Prometheus public type with `T: eunomia::RealField`.
-4. Regenerate the standalone lockfile and verify that one Eunomia source and
-   one Leto source resolve throughout the consumer graph.
+4. Regenerate the standalone lockfile and verify that one Eunomia, one
+   Aequitas and one Leto source each resolve throughout the consumer graph.
+   The Prometheus lockfile takes Aequitas, Eunomia and Horae Time from the
+   crates.io registry and Leto from one revision of its git repository.
 
 Before:
 

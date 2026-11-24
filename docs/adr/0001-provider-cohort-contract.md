@@ -13,16 +13,19 @@ trait from Eunomia 0.12 as distinct nominal contracts. Advancing Prometheus to
 Eunomia 0.12 therefore rejects a generic consumer whose bound still names the
 0.11 trait, even when its scalar type implements both versions.
 
-The selected stack cohort also advances Leto from 0.46 to 0.47. Prometheus must
-resolve Eunomia and Leto as one coherent provider set because its public sparse
-matrix contains Leto storage parameterized by Eunomia scalars.
+At the decision date the selected stack cohort also advanced Leto from 0.46 to
+0.47. Prometheus must resolve Eunomia and Leto as one coherent provider set
+because its public sparse matrix contains Leto storage parameterized by
+Eunomia scalars.
 
 ## Decision
 
-Prometheus advances its public scalar contract to Eunomia 0.12 and its sparse
-storage contract to Leto 0.47 in one breaking change. Consumers update their
-Eunomia bound and imports to 0.12 and select the Leto 0.47 cohort before using
-Prometheus public generic types.
+Prometheus advances its public scalar contract and its sparse storage contract
+as one provider cohort: Eunomia and Leto move together in one breaking change.
+The present manifest line is Eunomia 0.12.1 and Leto 0.52.0
+(`Cargo.toml:25,30`). Consumers update their Eunomia bound and imports to 0.12
+and select the cohort the manifest names before using Prometheus public
+generic types.
 
 No compatibility trait, forwarding wrapper, or duplicate matrix type remains.
 Those alternatives would preserve two nominal scalar contracts and split the
@@ -56,3 +59,10 @@ their selected graphs build, not that their public APIs are compatible.
 Revisit this decision only if Eunomia supplies a stable cross-version nominal
 contract that both provider lines implement without adapters, or Prometheus no
 longer exposes Eunomia-bound public types.
+
+## Revisions
+
+- 2026-11-24: the Decision names the cohort rule and the present Leto 0.52.0
+  line instead of Leto 0.47, because the manifest requires 0.52.0
+  (`Cargo.toml:30`, advanced from 0.51.0 by PR #98, `74158ab`); the cohort
+  decision is unchanged.
