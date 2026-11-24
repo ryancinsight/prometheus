@@ -131,6 +131,15 @@ impl<T, D: RateConstantDimension> From<Quantity<T, D>> for RateConstant<T> {
     }
 }
 
+/// Add one reactant order to a running sum, saturating at `u64::MAX`.
+///
+/// A sum of `u32` orders exceeds `u64::MAX` only past `2³²` of them, so the
+/// saturation is pinned on this step rather than by iterating that many.
+#[inline]
+fn accumulate_order(total: u64, order: Order) -> u64 {
+    total.saturating_add(u64::from(order))
+}
+
 /// Compare a declared overall order with the sum of the reactant orders.
 ///
 /// The sum is formed in `u64`, saturating, so no input wraps; a negative
@@ -139,9 +148,7 @@ pub(crate) fn check_order(
     declared: i32,
     reactant_orders: impl IntoIterator<Item = Order>,
 ) -> Result<(), RateOrderMismatch> {
-    let reactant_order = reactant_orders
-        .into_iter()
-        .fold(0_u64, |total, order| total.saturating_add(u64::from(order)));
+    let reactant_order = reactant_orders.into_iter().fold(0_u64, accumulate_order);
     if u64::try_from(declared).is_ok_and(|declared| declared == reactant_order) {
         Ok(())
     } else {
@@ -309,7 +316,7 @@ fn reaction_power<T: RealField>(base: T, order: Order) -> T {
 
 #[cfg(test)]
 mod tests {
-    use super::{Order, mass_action_product};
+    use super::{Order, accumulate_order, mass_action_product};
     use eunomia::RealField;
 
     /// First order above `i32::MAX`: the least order the former narrowing
@@ -408,6 +415,67 @@ mod tests {
         assert_exact_at_both(0.0, 0, 1.0);
         assert_exact_at_both(0.0, u32::MAX, 0.0);
         assert_exact_at_both(f64::INFINITY, FIRST_UNSIGNED_ORDER, f64::INFINITY);
+    }
+
+    #[test]
+    fn negative_zero_base_keeps_the_parity_sign() {
+        // IEEE 754 multiplication: the sign of a product is the exclusive or
+        // of its factors' signs and a zero magnitude stays zero, so
+        // `(-0.0)^order` is `-0.0` for odd `order` and `+0.0` for even.
+        assert_exact_at_both(-0.0, FIRST_UNSIGNED_ORDER, 0.0);
+        assert_exact_at_both(-0.0, FIRST_UNSIGNED_ORDER + 1, -0.0);
+        assert_exact_at_both(-0.0, u32::MAX, -0.0);
+    }
+
+    #[test]
+    fn negative_infinite_base_keeps_the_parity_sign() {
+        // The same sign rule with an infinite magnitude, which no product of
+        // infinities reduces: `(-∞)^order` is `-∞` for odd `order` and `+∞`
+        // for even.
+        assert_exact_at_both(f64::NEG_INFINITY, FIRST_UNSIGNED_ORDER, f64::INFINITY);
+        assert_exact_at_both(
+            f64::NEG_INFINITY,
+            FIRST_UNSIGNED_ORDER + 1,
+            f64::NEG_INFINITY,
+        );
+        assert_exact_at_both(f64::NEG_INFINITY, u32::MAX, f64::NEG_INFINITY);
+    }
+
+    #[test]
+    fn subnormal_base_underflows_to_a_parity_signed_zero() {
+        // The least positive subnormal of each type, `2⁻¹⁰⁷⁴` and `2⁻¹⁴⁹`,
+        // raised to an order of at least `2³¹` has magnitude below
+        // `2^(-149·2³¹)`, under the least subnormal of either type, so the
+        // product rounds to zero and keeps the sign `(-1)^order`. `f32` reads
+        // `2⁻¹⁰⁷⁴` as a zero of the same sign.
+        for least_subnormal in [f64::from_bits(1), f64::from(f32::from_bits(1))] {
+            assert_exact_at_both(least_subnormal, FIRST_UNSIGNED_ORDER, 0.0);
+            assert_exact_at_both(least_subnormal, FIRST_UNSIGNED_ORDER + 1, 0.0);
+            assert_exact_at_both(-least_subnormal, FIRST_UNSIGNED_ORDER, 0.0);
+            assert_exact_at_both(-least_subnormal, FIRST_UNSIGNED_ORDER + 1, -0.0);
+            assert_exact_at_both(-least_subnormal, u32::MAX, -0.0);
+        }
+    }
+
+    #[test]
+    fn order_sum_saturates_at_the_largest_total() {
+        let largest = u64::MAX;
+        let widest = u64::from(u32::MAX);
+        // `(2³² + 1)·(2³² − 1) = 2⁶⁴ − 1`: `2³² + 1` orders of `u32::MAX`
+        // sum exactly to `largest`, and one further order 3 makes the exact
+        // sum `2⁶⁴ + 2`. A wrapping sum reads that as 2, which a declared
+        // order 2 accepts; the saturated sum is `largest`. From `largest − 1`
+        // the exact sum `2⁶⁴ + 1` wraps to 1.
+        assert_eq!(accumulate_order(largest, 3), largest);
+        assert_eq!(accumulate_order(largest - 1, 3), largest);
+        assert_eq!(accumulate_order(largest, u32::MAX), largest);
+        // An exact fit is not saturation: `(largest − widest) + widest`, and
+        // one below it stays exact.
+        assert_eq!(accumulate_order(largest - widest, u32::MAX), largest);
+        assert_eq!(
+            accumulate_order(largest - widest - 1, u32::MAX),
+            largest - 1
+        );
     }
 
     #[test]

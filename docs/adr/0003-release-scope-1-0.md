@@ -43,8 +43,9 @@ open item carries exactly one `milestone:` assignment.
   pinned. Exit: narrowing delivered (PR #80: the dense reference raises each
   base by repetition); the `-0.0`/`-infinity`/subnormal edge tests pass and
   the `-0.0`/`-infinity` cases kill the `base.abs()` mutant
-  (`PROMETHEUS-ORDER-SIGNED-EDGE-TESTS`) — the remaining check fails without
-  its fix.
+  (`negative_zero_base_keeps_the_parity_sign`,
+  `negative_infinite_base_keeps_the_parity_sign` and
+  `subnormal_base_underflows_to_a_parity_signed_zero`, PR #106).
 - **M-board-hygiene** (0.2.0): the changelog states the shipped cohort.
   Exit: every provider version named in `CHANGELOG.md` equals the
   `Cargo.toml` requirement at the head — the grep comparison fails on drift.
