@@ -17,44 +17,6 @@ All notable changes are documented here, following a keep-a-changelog shape.
   See [ADR 0002](docs/adr/0002-rate-constant-typing.md).
 - `network::Reaction<T>`: the `(RateConstant<T>, Vec<(usize, Order)>)` pair
   that `ReactionNetwork::new` takes for each reaction.
-
-### Changed
-
-- Check the rate-constant dimension against the reaction order in
-  `mass_action_rate`. A rate constant's dimension is
-  `mol^(1-n)·m^(3n-3)·s⁻¹` for overall order `n`; the function now returns
-  `Result<ReactionRate<T>, RateOrderMismatch>`, rejects a coefficient of
-  another order, and no longer compiles for a quantity that is no rate
-  constant. A rate-constant dimension has an amount exponent from `-(2³¹-2)`
-  to `2³¹-1`, so its order is an `i32`. `ReactionNetwork::new` takes
-  `RateConstant<T>` per reaction (built from a typed quantity with `.into()`)
-  and returns `InvalidNetwork::OrderMismatch` on a mismatch;
-  `InvalidNetwork::NonFiniteRate` no longer covers negative coefficients,
-  which are `NegativeRate`, and `InvalidNetwork` is `#[non_exhaustive]`. This
-  is a breaking change (0.1.0 to 0.2.0): a return type, a generic bound and
-  an enum change. See
-  [ADR 0002](docs/adr/0002-rate-constant-typing.md) and the
-  [migration guide](docs/migration.md).
-- Advance the public provider cohort: Prometheus binds its scalar contract to
-  Eunomia 0.12 and its sparse-storage contract to Leto 0.47, so code generic
-  over the Eunomia 0.11 `RealField` bound no longer satisfies Prometheus's
-  public bounds. See
-  [ADR 0001](docs/adr/0001-provider-cohort-contract.md) and the
-  [migration guide](docs/migration.md).
-- Follow the current provider cohort. The manifest requires `aequitas` 0.3.1,
-  `eunomia` 0.12.0, the optional `leto` `>=0.47.1, <0.51.0`, and the optional
-  `horae-time` 0.2.2; the lock resolves each at its repository's current
-  default head. One git source resolves to one revision, so every edge that
-  names a provider repository has to agree on a version or the resolver
-  refuses the pair. The public Prometheus surface is otherwise unchanged: no
-  type from a moved provider appears in a Prometheus signature.
-
-- The optional time-integration dependency is declared as the registry package
-  `horae-time` (the `horae` name belongs to another crates.io owner). Its library
-  name stays `horae`, so every `use horae::` path is unchanged.
-
-### Added
-
 - Phase 0 core: a `Species` type carrying a strictly positive molar mass (typed
   as `Mass / AmountOfSubstance`, verified by a type-level oracle), and a
   validated `Concentration` boundary that rejects negative, `NaN`, and infinite
@@ -82,3 +44,33 @@ All notable changes are documented here, following a keep-a-changelog shape.
   (`c_B/c_A → K_eq`) closed forms; the refinement oracle recovers RK4's fourth
   order, and the balanced-network invariants (mass conservation and
   non-negativity) hold under integration.
+
+### Changed
+
+- Check the rate-constant dimension against the reaction order in
+  `mass_action_rate`. A rate constant's dimension is
+  `mol^(1-n)·m^(3n-3)·s⁻¹` for overall order `n`; the function now returns
+  `Result<ReactionRate<T>, RateOrderMismatch>`, rejects a coefficient of
+  another order, and no longer compiles for a quantity that is no rate
+  constant. A rate-constant dimension has an amount exponent from `-(2³¹-2)`
+  to `2³¹-1`, so its order is an `i32`. `ReactionNetwork::new` takes
+  `RateConstant<T>` per reaction (built from a typed quantity with `.into()`)
+  and returns `InvalidNetwork::OrderMismatch` on a mismatch;
+  `InvalidNetwork::NonFiniteRate` no longer covers negative coefficients,
+  which are `NegativeRate`, and `InvalidNetwork` is `#[non_exhaustive]`. This
+  is a breaking change (0.1.0 to 0.2.0): a return type, a generic bound and
+  an enum change. See
+  [ADR 0002](docs/adr/0002-rate-constant-typing.md) and the
+  [migration guide](docs/migration.md).
+- Advance the public provider cohort. The manifest requires `aequitas` 0.5.0,
+  `eunomia` 0.12.1, the optional `leto` 0.52.0 and the optional `horae-time`
+  0.4.0. The lock resolves `aequitas`, `eunomia` and `horae-time` from the
+  crates.io registry and `leto` from one revision of its git repository.
+  Prometheus binds its scalar contract to Eunomia 0.12, so code generic over
+  the Eunomia 0.11 `RealField` bound no longer satisfies Prometheus's public
+  bounds. See
+  [ADR 0001](docs/adr/0001-provider-cohort-contract.md) and the
+  [migration guide](docs/migration.md).
+- The optional time-integration dependency is declared as the registry package
+  `horae-time` (the `horae` name belongs to another crates.io owner). Its library
+  name stays `horae`, so every `use horae::` path is unchanged.

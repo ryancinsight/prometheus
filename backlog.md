@@ -60,17 +60,6 @@ otherwise; no test was executed.
 - Acceptance: `cargo clippy --locked --all-targets --no-default-features -- -D warnings` exits 0 and runs as a CI step; it fails at basis. `cargo nextest run --locked --no-default-features` still runs `tests/species.rs` and `tests/enthalpy.rs`, which use only `common::assert_close`.
 - Next step: gate `water_formation` and its imports in `tests/common/mod.rs` on `cfg(feature = "std")`, add `[[test]] required-features` for `integration`, `rate`, `production` and `stoichiometry`, then add the CI step.
 
-<a id="PROMETHEUS-CHANGELOG-DRIFT"></a>
-## PROMETHEUS-CHANGELOG-DRIFT — Bring the Unreleased changelog in line with the manifest and lock [patch] — todo
-- priority: verification; needs: none
-- milestone: M-board-hygiene.
-- basis: d190167170c305957c266d4cbdf828eab55c685a
-- scope: `CHANGELOG.md`
-- Defect (read at basis): (1) `CHANGELOG.md:39` names Leto 0.47 and `:44-46` name `aequitas` 0.3.1, `eunomia` 0.12.0, `leto` `>=0.47.1, <0.51.0` and `horae-time` 0.2.2; `Cargo.toml:24-32` require aequitas 0.5.0, eunomia 0.12.1, leto 0.52.0 and horae-time 0.4.0. `:39-40` also name Eunomia 0.12 (consistent with 0.12.1) and Eunomia 0.11 (the version left behind, which stays). (2) `CHANGELOG.md:46-47` says the lock "resolves each at its repository's current default head"; `Cargo.lock:6-9,151-154,203-206` resolve aequitas, eunomia and horae-time from the registry and `:225` pins leto to one git revision, so the sentence is false. (3) `[Unreleased]` carries two `### Added` headings (`CHANGELOG.md:7`, `:56`) with `### Changed` between them.
-- Outcome: the Unreleased section states only what the manifest, the lock and ADR 0001 state, under one `Added` and one `Changed` heading, in the repository's changelog convention.
-- Acceptance: `git grep -n 'default head' CHANGELOG.md` prints nothing (the sentence wraps across two lines, so `current default head` finds nothing at basis); `git grep -c '^### Added' CHANGELOG.md` prints `CHANGELOG.md:1` (`CHANGELOG.md:2` at basis); every version that `git grep -n -i -E 'aequitas|eunomia|leto|horae' CHANGELOG.md` lists as a Prometheus requirement equals the `Cargo.toml:24-32` requirement (aequitas 0.5.0, eunomia 0.12.1, leto 0.52.0, horae-time 0.4.0), the `M-board-hygiene` exit; a version named as the one left behind (`Eunomia 0.11`) may stay. The case-sensitive `git grep -n 'eunomia\|leto\|aequitas\|horae'` is insufficient: it omits `:39-40` (`Eunomia`, `Leto`), so fixing `:44-47` alone passes it while `:39` still names Leto 0.47. All three fail at basis.
-- Next step: re-read each cohort statement against `Cargo.toml` and `Cargo.lock`, edit the entry, then run the docs and link checks of the committed gate. `docs/adr/0001-provider-cohort-contract.md:16,23-24` and `docs/migration.md:42,47` also name Leto 0.47; if the edit leaves the entry disagreeing with them, file a sibling item for those documents.
-
 <a id="PROMETHEUS-ERROR-TRAITS"></a>
 ## PROMETHEUS-ERROR-TRAITS — Implement Display and Error for the public error types [minor] — todo
 - priority: verification; needs: none
