@@ -41,19 +41,19 @@ otherwise; no test was executed.
 ## PROMETHEUS-RELEASE-LADDER — Obtain the independent judge verdict on the release ladder [patch] — todo
 - priority: verification; needs: none
 - milestone: M-1.0 (exit evidence).
-- basis: 620ebc9
+- basis: d190167170c305957c266d4cbdf828eab55c685a
 - scope: `docs/adr/0003-release-scope-1-0.md`, `backlog.md`
 - Gap (read at basis): the ladder and [ADR 0003](docs/adr/0003-release-scope-1-0.md) landed through PR #79 under `judge-required`, but no judge verdict is recorded: no commit status on PR #79's head `d78a862` or on its merge commit `6bdf5c9`, and no comments or reviews on it (hosting API read 2026-11-16). The obligation of the original item is open.
 - Outcome: an independent judge has falsified the ladder at its default-branch head and its findings are fixed or filed.
 - Acceptance: a judge verdict that did not generate the ladder maps every capability area of the ADR table and every open feature item (none open at basis) to a check or a non-goal, and finds each exit check runnable and failing without its feature; the verdict is posted on the PR carrying any fix, or on the PR that closes this item.
-- Cases the judge also tries (the exits' runnable checks were not run at `basis:`): (a) the `M-rate-typing` runnable check may pass while [ADR 0003](docs/adr/0003-release-scope-1-0.md) (ADR 0003:104-105) records that a downstream impl of the unsealed trait defeats the rule: does the seal's `compile_fail` doctest join that exit, a judged ADR 0003 revision; (b) the `M-board-hygiene` exit may already hold: `PROMETHEUS-CHANGELOG-DRIFT`'s lowercase grep passes, while `CHANGELOG.md:38-39` name Leto 0.47 and, as the old bound, Eunomia 0.11, against `Cargo.toml:30` and `:25`, which the exit's wording may count as drift; the ladder judge decides which comparison the exit means and whether the exit or that grep needs fixing.
+- Cases the judge also tries (the exits' runnable checks were not run at `basis:`): (a) the seal landed in `ef30785` and ADR 0003 (:108-111) states it delivered with no exit change: does the seal's `compile_fail,E0277` doctest (`src/rate/dimension.rs:22-28`) join the `M-rate-typing` exit, a judged ADR 0003 revision; (b) the `M-board-hygiene` exit fails at basis: `CHANGELOG.md:38-47` name Eunomia 0.12, Leto 0.47, `aequitas` 0.3.1, `eunomia` 0.12.0, `leto` `>=0.47.1, <0.51.0` and `horae-time` 0.2.2, against `Cargo.toml:24-32` (aequitas 0.5.0, eunomia 0.12.1, leto 0.52.0, horae-time 0.4.0); the judge decides whether the exit closes with `PROMETHEUS-CHANGELOG-DRIFT` and whether its grep comparison is the check the exit means.
 - Next step: dispatch a judge on `backlog.md` and ADR 0003 at the fetched default head, with this acceptance, the cases above and the exit lines as its oracle.
 
 <a id="PROMETHEUS-NO-STD-TEST-TARGETS"></a>
 ## PROMETHEUS-NO-STD-TEST-TARGETS — Build the test targets without default features [patch] — todo
 - priority: verification; needs: none
 - milestone: M-1.0 (exit evidence: tests green at all features).
-- basis: dc23785
+- basis: d190167170c305957c266d4cbdf828eab55c685a
 - scope: `Cargo.toml`, `tests/common/mod.rs`, `tests/rate.rs`, `tests/integration.rs`, `tests/production.rs`, `tests/stoichiometry.rs`, `.github/workflows/ci.yml`
 - Gap: CI checks `--no-default-features` for the library only (`cargo check --locked --no-default-features`) and runs clippy with `--all-features`. `cargo clippy --all-targets --no-default-features` was reported failing to compile test targets before filing and was not rerun here. Read at basis: `tests/common/mod.rs:9` imports `StoichiometricMatrix`, which `src/lib.rs` gates on `std`, and every test file but `rate.rs` includes `common`; `tests/integration.rs:11-16` and `tests/rate.rs:23-24` import the optional `horae`.
 - Outcome: the no-default-features test targets compile, and each target that needs `std` declares `required-features = ["std"]`.
@@ -64,29 +64,30 @@ otherwise; no test was executed.
 ## PROMETHEUS-CHANGELOG-DRIFT — Bring the Unreleased changelog in line with the manifest and lock [patch] — todo
 - priority: verification; needs: none
 - milestone: M-board-hygiene.
-- basis: dc23785
+- basis: d190167170c305957c266d4cbdf828eab55c685a
 - scope: `CHANGELOG.md`
-- Defect (read at basis; the original version drift is gone, each provider version the entry names equals `Cargo.toml`): (1) the cohort entry says the lock "resolves each at its repository's current default head"; `Cargo.lock` pins `aequitas`, `eunomia`, `horae-time` and `leto` at revisions that differ from `git ls-remote <repository> HEAD` (read 2026-11-16), so the sentence is false for all four and false again after any provider commit. (2) `[Unreleased]` carries two `### Added` headings, with `### Changed` between them.
+- Defect (read at basis): (1) `CHANGELOG.md:38-47` name Eunomia 0.12, Leto 0.47, `aequitas` 0.3.1, `eunomia` 0.12.0, `leto` `>=0.47.1, <0.51.0` and `horae-time` 0.2.2; `Cargo.toml:24-32` require aequitas 0.5.0, eunomia 0.12.1, leto 0.52.0 and horae-time 0.4.0. (2) `CHANGELOG.md:46-47` says the lock "resolves each at its repository's current default head"; `Cargo.lock:6-9,151-154,203-206` resolve aequitas, eunomia and horae-time from the registry and `:225` pins leto to one git revision, so the sentence is false. (3) `[Unreleased]` carries two `### Added` headings (`CHANGELOG.md:7`, `:56`) with `### Changed` between them.
 - Outcome: the Unreleased section states only what the manifest, the lock and ADR 0001 state, under one `Added` and one `Changed` heading, in the repository's changelog convention.
-- Acceptance: `git grep -n 'default head' CHANGELOG.md` prints nothing (the sentence wraps across two lines, so a search for `current default head` finds nothing at basis); `git grep -c '^### Added' CHANGELOG.md` prints `CHANGELOG.md:1` (`CHANGELOG.md:2` at basis); each provider version named equals the `Cargo.toml` requirement (`git grep -n 'eunomia\|leto\|aequitas\|horae' CHANGELOG.md Cargo.toml`). The first two fail at basis; the third holds at basis and guards the edit.
-- Next step: re-read each cohort statement against `Cargo.toml` and `Cargo.lock` (the ADR 0001 entry names Leto 0.47, the lock resolves leto 0.50.0), edit the entry, then run the docs and link checks of the committed gate.
+- Acceptance: `git grep -n 'default head' CHANGELOG.md` prints nothing (the sentence wraps across two lines, so `current default head` finds nothing at basis); `git grep -c '^### Added' CHANGELOG.md` prints `CHANGELOG.md:1` (`CHANGELOG.md:2` at basis); each provider version `CHANGELOG.md` names equals the `Cargo.toml` requirement (`git grep -n 'eunomia\|leto\|aequitas\|horae' CHANGELOG.md Cargo.toml`), the `M-board-hygiene` exit. All three fail at basis.
+- Next step: re-read each cohort statement against `Cargo.toml` and `Cargo.lock`, edit the entry, then run the docs and link checks of the committed gate.
 
 <a id="PROMETHEUS-ERROR-TRAITS"></a>
 ## PROMETHEUS-ERROR-TRAITS — Implement Display and Error for the public error types [minor] — todo
 - priority: verification; needs: none
 - milestone: M-rate-typing.
-- basis: 620ebc9
-- scope: `src/network.rs`, `src/stoichiometry.rs`, `src/concentration.rs`, `src/species.rs`, `src/enthalpy.rs`
-- Gap (read at basis): only `RateOrderMismatch` implements `Display` and `core::error::Error` (`src/rate.rs:62-72`); `InvalidNetwork` (`src/network.rs:22`), `StateDimensionMismatch`, `InvalidConcentration`, `NonPositiveMolarMass`, `InvalidStoichiometry`, `MisshapedMasses`, `MisshapedRates` and `MisshapedEnthalpies` implement neither. PR #85 listed `InvalidNetwork` as "Filed, not changed".
-- Outcome: each type implements both traits, `Display` naming the broken invariant and the offending values.
-- Acceptance: one test per variant asserts the exact `Display` text; `git grep -n 'core::error::Error' -- src` lists nine impls (one at basis).
-- Next step: add the impls beside each type, following `src/rate.rs:62-72`.
+- basis: d190167170c305957c266d4cbdf828eab55c685a
+- scope: `src/network.rs`, `src/stoichiometry.rs`, `src/concentration.rs`, `src/species.rs`, `src/enthalpy.rs`, `tests/`
+- Gap (read at basis): only `RateOrderMismatch` implements `Display` and `core::error::Error` (`src/rate.rs:62-72`); `InvalidNetwork` (`src/network.rs:22`), `StateDimensionMismatch`, `InvalidConcentration`, `NonPositiveMolarMass`, `InvalidStoichiometry`, `MisshapedMasses`, `MisshapedRates` and `MisshapedEnthalpies` implement neither. Six of the eight are structs; `InvalidConcentration` (`src/concentration.rs:20`) and `NonPositiveMolarMass` (`src/species.rs:39`) are unit structs with no value to name.
+- Outcome: each type implements both traits; `Display` names the broken invariant, and the offending values for each type that carries them.
+- Acceptance: one test per enum variant and one per struct asserts the exact `Display` text through a `&dyn core::error::Error` coercion, following `tests/rate.rs:317-328`; a missing impl is a compile error in that test. Fails at basis: eight types have no impl.
+- Next step: add the impls beside each type, following `src/rate.rs:62-72`, and the tests in the existing target of each type.
+- Open (ladder decision): `priority: verification` fits an additive public API gap poorly; the ladder judge sets the class.
 
 <a id="PROMETHEUS-ORDER-SIGNED-EDGE-TESTS"></a>
 ## PROMETHEUS-ORDER-SIGNED-EDGE-TESTS — Pin signed zero, infinity and subnormal bases above order 2^31 [patch] — todo
 - priority: verification; needs: none
 - milestone: M-oracle-hardening.
-- basis: dc23785
+- basis: d190167170c305957c266d4cbdf828eab55c685a
 - scope: `src/rate.rs` (module `tests`)
 - Gap (read at basis): the `reaction_power` tests cover bases -2, -0.5, -1, +0, +infinity and NaN at orders above `i32::MAX`. No test pins a `-0.0` base, a `-infinity` base at an odd order, or a subnormal base (positive and negative, `f64` and `f32` minimum subnormal) above `2^31`.
 - Outcome: each case asserts its IEEE result bit for bit through `assert_exact_at_both`: `-0.0` gives `-0.0` at an odd order and `+0.0` at an even one, `-infinity` gives `-infinity` at an odd order and `+infinity` at an even one, and a subnormal base underflows to a zero carrying the parity sign.
@@ -97,9 +98,31 @@ otherwise; no test was executed.
 ## PROMETHEUS-ORDER-SUM-SATURATION-TEST — Kill the saturating_add to wrapping_add mutant in the order sum [patch] — todo
 - priority: verification; needs: none
 - milestone: M-oracle-hardening.
-- basis: dc23785
+- basis: d190167170c305957c266d4cbdf828eab55c685a
 - scope: `src/rate.rs` (`check_order` and module `tests`)
 - Gap: `check_order` forms the reactant order sum as `fold(0_u64, |total, order| total.saturating_add(u64::from(order)))`. A mutant replacing `saturating_add` with `wrapping_add` was reported surviving the tests before filing (not rerun here). It is not equivalent: `2^32 + 1` orders of `u32::MAX` sum to `2^64 - 1`, and one further order 3 saturates to `u64::MAX` (an error against declared order 2) but wraps to `2` (accepted).
 - Outcome: a value-semantic test pins the saturation, with a workload that fits the committed test budget.
 - Acceptance: the test asserts `Err(RateOrderMismatch { reactant_order: u64::MAX, .. })` for declared order 2; it passes at head and `cargo mutants --file src/rate.rs` reports the `wrapping_add` mutant caught.
 - Next step: run `check_order(2, core::iter::repeat_n(u32::MAX, (1 << 32) + 1).chain([3]))` under nextest; if it exceeds the 30 s slow period, extract the per-order step as a function over `(u64, Order)` and assert `u64::MAX - 1` plus order 3 gives `u64::MAX`, an extraction and never a smaller workload.
+
+<a id="PROMETHEUS-DOCTEST-ERROR-CODES"></a>
+## PROMETHEUS-DOCTEST-ERROR-CODES — Check the error codes of the compile_fail doctests [patch] — todo
+- priority: verification; needs: none
+- milestone: M-rate-typing.
+- basis: d190167170c305957c266d4cbdf828eab55c685a
+- scope: `.github/workflows/ci.yml`, `src/rate.rs`, `src/rate/dimension.rs`
+- Gap (read at basis): twelve doctests pin an error code (`compile_fail,E0277` or `E0271`: `src/rate/dimension.rs` eleven, `src/rate.rs` one). Stable rustdoc 1.97.0, the pinned toolchain (`rust-toolchain.toml`), does not check the code: a probe doctest `compile_fail,E0277` whose body fails with E0308 passed as `ok` under stable and failed under `rustdoc +nightly --test -Z unstable-options` ("Some expected error codes were not found"). CI runs `cargo test --locked --doc --all-features` on stable only (`.github/workflows/ci.yml:53-54`), so a doctest can fail for another reason and stay green, and the `M-rate-typing` rejection tests are such pins. Whether all twelve pass the nightly check was not run.
+- Outcome: CI fails when a pinned code is absent from the compiler's errors for its doctest.
+- Acceptance: a CI step runs the crate's doctests under a pinned nightly with `-Z unstable-options` and exits 0 at head; with one doctest's code changed to one its body does not raise (`E0277` to `E0308`) it exits nonzero.
+- Next step: run the nightly doctest check locally, correct any pin it exposes, then add the step as its own nightly job with the toolchain date pinned in the workflow.
+
+<a id="PROMETHEUS-ADR-0002-SEAL-REWRITE"></a>
+## PROMETHEUS-ADR-0002-SEAL-REWRITE — State the seal in ADR 0002 decision 1 [patch] — todo
+- priority: verification; needs: none
+- milestone: M-rate-typing.
+- basis: d190167170c305957c266d4cbdf828eab55c685a
+- scope: `docs/adr/0002-rate-constant-typing.md`
+- Gap (read at basis): `RateConstantDimension` is sealed (`src/rate/dimension.rs:18-19,144`, commit `ef30785`), but ADR 0002 decision 1 (`docs/adr/0002-rate-constant-typing.md:41-53`) still reads "implemented for the aequitas dimension" with no supertrait; the seal appears only in a ten-line revision note (`:79-88`). A changed decision is rewritten in place with a one-line dated revision note.
+- Outcome: decision 1 states that the trait is sealed and why; the seal's revision note is one line naming what, why and the evidence.
+- Acceptance: `git grep -n -i 'seal' docs/adr/0002-rate-constant-typing.md` matches a line between `## Decision` and `## Revisions`; it matches only after `## Revisions` at basis. The ADR stays within 150 lines and `docs/adr/README.md` still lists it as Accepted.
+- Next step: add the supertrait sentence to decision 1, compress the revision note, and rerun the ADR index check.
