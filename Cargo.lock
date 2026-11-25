@@ -222,7 +222,7 @@ dependencies = [
 [[package]]
 name = "leto"
 version = "0.52.0"
-source = "git+https://github.com/ryancinsight/leto#a98b8a706b6644bdd28c9fd5680c2dc044bb2b67"
+source = "git+https://github.com/ryancinsight/leto#d47f37f2854e75df35908985a6ff3f0e5296afd4"
 dependencies = [
  "aequitas",
  "eunomia",
