@@ -24,14 +24,11 @@ otherwise; no test was executed.
 ## M-rate-typing (0.2.0): the rate-constant dimension is enforced — needs: none
 - exit: a dimensionally wrong coefficient is rejected at compile time or as a typed error, for `mass_action_rate` and `ReactionNetwork::evaluate`; runnable check `cargo nextest run --locked --all-features -- rate` plus the wrong-order rejection test — fails on a build where a first-order constant with order-2 reactants returns a rate.
 - co-evolution at release: a consumer of `mass_action_rate` or `ReactionNetwork::new` (M-ecosystem names kwavers and CFDrs) migrates to `Result<ReactionRate<T>, RateOrderMismatch>` and `RateConstant<T>` when 0.2.0 releases, per [docs/migration.md](docs/migration.md); receipts live on their boards, and the release item filed when this milestone closes carries this note.
-<a id="M-oracle-hardening"></a>
-## M-oracle-hardening (0.2.0): the network oracle and power edges are pinned — needs: none
-- exit: narrowing delivered (PR #80: the dense reference raises each base by repetition); the `-0.0`/`-infinity`/subnormal edge tests pass and kill the `base.abs()` mutant — the remaining check fails without its fix.
 <a id="M-board-hygiene"></a>
 ## M-board-hygiene (0.2.0): the changelog states the shipped cohort — needs: none
 - exit: every provider version named in `CHANGELOG.md` equals the `Cargo.toml` requirement at the head — the grep comparison fails on drift.
 <a id="M-1.0"></a>
-## Milestone M-1.0 (1.0.0): stable kinetics release (authority-gated) — needs: M-rate-typing, M-oracle-hardening, M-board-hygiene
+## Milestone M-1.0 (1.0.0): stable kinetics release (authority-gated) — needs: M-rate-typing, M-board-hygiene
 - exit: `cargo semver-checks`, publish dry-run, `cargo doc`, nextest/doctest green at all features, zero open correctness items. Veto: release authority sets the API-freeze contents; never forces `publish = true` without it.
 <a id="M-ecosystem"></a>
 ## M-ecosystem: consumer-owned migrations (kwavers, CFDrs) — needs: M-1.0
@@ -46,7 +43,7 @@ otherwise; no test was executed.
 - Gap (read at basis): the ladder and [ADR 0003](docs/adr/0003-release-scope-1-0.md) landed through PR #79 under `judge-required`, but no judge verdict is recorded: no commit status on PR #79's head `d78a862` or on its merge commit `6bdf5c9`, and no comments or reviews on it (hosting API read 2026-11-16 and again 2026-11-24). The obligation of the original item is open.
 - Outcome: an independent judge has falsified the ladder at its default-branch head and its findings are fixed or filed.
 - Acceptance: a judge verdict that did not generate the ladder maps every capability area of the ADR table and every open feature item (none open at basis) to a check or a non-goal, and finds each exit check runnable and failing without its feature; the verdict is posted on the PR carrying any fix, or on the PR that closes this item.
-- Cases the judge also tries (no exit's runnable check was run, other than the `M-board-hygiene` greps in (b)): (a) the seal landed in `ef30785` and ADR 0003 (:107-110) states it delivered with no exit change: does the seal's `compile_fail,E0277` doctest (`src/rate/dimension.rs:22-28`) join the `M-rate-typing` exit, a judged ADR 0003 revision; (b) the `M-board-hygiene` exit's greps, run at `basis:` after the changelog repair (PR #103, `a7904b9`): `git grep -n 'default head' <basis> -- CHANGELOG.md` prints nothing, `git grep -c '^### Added' <basis> -- CHANGELOG.md` prints 1, and `CHANGELOG.md:65-67` name aequitas 0.5.0, eunomia 0.12.1, leto 0.52.0 and horae-time 0.4.0, equal to `Cargo.toml:24,25,30,32`; `CHANGELOG.md:69-70` also name the Eunomia 0.12 line and the Eunomia 0.11 line left behind, neither a requirement string. The judge decides whether that reading satisfies the exit and whether the grep comparison is the check the exit means, then whether the milestone closes.
+- Cases the judge also tries (no exit's runnable check was run, other than the `M-board-hygiene` greps in (b)): (a) the seal landed in `ef30785` and ADR 0003 (:108-111 at `2fa7f44`, :107-110 at this item's basis) states it delivered with no exit change: does the seal's `compile_fail,E0277` doctest (`src/rate/dimension.rs:22-28`) join the `M-rate-typing` exit, a judged ADR 0003 revision; (b) the `M-board-hygiene` exit's greps, run at `basis:` after the changelog repair (PR #103, `a7904b9`): `git grep -n 'default head' <basis> -- CHANGELOG.md` prints nothing, `git grep -c '^### Added' <basis> -- CHANGELOG.md` prints 1, and `CHANGELOG.md:65-67` name aequitas 0.5.0, eunomia 0.12.1, leto 0.52.0 and horae-time 0.4.0, equal to `Cargo.toml:24,25,30,32`; `CHANGELOG.md:69-70` also name the Eunomia 0.12 line and the Eunomia 0.11 line left behind, neither a requirement string. The judge decides whether that reading satisfies the exit and whether the grep comparison is the check the exit means, then whether the milestone closes.
 - Next step: dispatch a judge on `backlog.md` and ADR 0003 at the fetched default head, with this acceptance, the cases above and the exit lines as its oracle.
 
 <a id="PROMETHEUS-NO-STD-TEST-TARGETS"></a>
@@ -82,3 +79,16 @@ otherwise; no test was executed.
 - Outcome: CI fails when a pinned code is absent from the compiler's errors for its doctest.
 - Acceptance: a CI step runs the crate's doctests under a pinned nightly (`cargo +nightly-<date> test --locked --doc --all-features`, no `-Z` flag: the rustdoc book lists error numbers under "Nightly-gated functionality", features that "just require a nightly build to operate", `src/doc/rustdoc/src/unstable-features.md` in rust-lang/rust) and exits 0 at head; with one doctest's code changed to one its body does not raise (`E0277` to `E0308`) it exits nonzero. The flag-free `rustdoc +nightly --test` behavior is observed; the `cargo` wrapper form is a hypothesis settled by that one run.
 - Next step: run the nightly doctest check locally, correct any pin it exposes, then add the step as its own nightly job with the toolchain date pinned in the workflow.
+
+<a id="PROMETHEUS-RELEASE-0-2-0"></a>
+## PROMETHEUS-RELEASE-0-2-0 — Release prometheus-kinetics 0.2.0 [minor] — blocked
+- priority: feature; needs: none
+- milestone: M-rate-typing (the earliest open block planned at 0.2.0; M-board-hygiene shares that version).
+- basis: 2fa7f44cffeacb5475f5198aa62563224822c659
+- scope: `Cargo.toml`, `CHANGELOG.md`, `docs/migration.md`
+- Outcome: 0.2.0 ships the typed rate constant and the pinned power edges. The `M-oracle-hardening` block closed at `2fa7f44` (its exit passes there). `M-rate-typing` and `M-board-hygiene`, also planned 0.2.0, stay open on the ladder.
+- Co-evolution note carried from `M-rate-typing`: consumers of `mass_action_rate` or `ReactionNetwork::new` (kwavers, CFDrs) migrate per [docs/migration.md](docs/migration.md) when 0.2.0 releases; receipts live on their boards.
+- Acceptance: a release commit with `version = "0.2.0"` in `Cargo.toml` is tagged, and `git grep -n 'fn negative_zero_base_keeps_the_parity_sign' <tag> -- src/rate/tests.rs` prints one line. Fails at basis: `Cargo.toml:6` reads `0.1.0` and `git ls-remote --tags origin` lists no tag.
+- Blocker: release authority; re-open trigger: the user's release decision for 0.2.0, raised in the batched Ask-User round.
+- Next step: on that decision, run the release tool with 0.2.0 under the SemVer gate and publish dry run, then notify the consumer boards.
+- Open (ladder judge): three milestones plan 0.2.0, so one release item serves them; the judge rules whether the release waits for all three exits or ships at this closure.
