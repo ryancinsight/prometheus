@@ -72,28 +72,6 @@ otherwise; no test was executed.
 - Next step: add the impls beside each type, following `src/rate.rs:62-72`, and the tests in the target that already names each type (`tests/species.rs`, `tests/stoichiometry.rs`, `tests/production.rs`, `tests/enthalpy.rs`, `tests/rate.rs`). `StateDimensionMismatch` (`src/network.rs:62`, built at `:165,:198`) is named by no test target, so its test is new, in `tests/integration.rs` beside the `ReactionNetwork::evaluate` tests.
 - Open (ladder decision): `priority: verification` fits an additive public API gap poorly; the ladder judge sets the class.
 
-<a id="PROMETHEUS-ORDER-SIGNED-EDGE-TESTS"></a>
-## PROMETHEUS-ORDER-SIGNED-EDGE-TESTS — Pin signed zero, infinity and subnormal bases above order 2^31 [patch] — todo
-- priority: verification; needs: none
-- milestone: M-oracle-hardening.
-- basis: d190167170c305957c266d4cbdf828eab55c685a
-- scope: `src/rate.rs` (module `tests`)
-- Gap (read at basis): the `reaction_power` tests cover bases -2, -0.5, -1, +0, +infinity and NaN at orders above `i32::MAX`. No test pins a `-0.0` base, a `-infinity` base at an odd order, or a subnormal base (positive and negative, `f64` and `f32` minimum subnormal) above `2^31`.
-- Outcome: each case asserts its IEEE result bit for bit through `assert_exact_at_both`: `-0.0` gives `-0.0` at an odd order and `+0.0` at an even one, `-infinity` gives `-infinity` at an odd order and `+infinity` at an even one, and a subnormal base underflows to a zero carrying the parity sign.
-- Acceptance: the new tests pass at head, and the `-0.0` and `-infinity` tests fail under a mutant that applies `base.abs()` only when the base is zero or infinite, which the existing tests (`+0.0` and `+infinity` only) do not kill. The subnormal tests pin IEEE underflow behavior and kill no distinct mutant, because the mutant leaves a nonzero finite base unchanged.
-- Next step: append the cases to `src/rate.rs` `tests`, then run the mutants and record which test kills each.
-
-<a id="PROMETHEUS-ORDER-SUM-SATURATION-TEST"></a>
-## PROMETHEUS-ORDER-SUM-SATURATION-TEST — Kill the saturating_add to wrapping_add mutant in the order sum [patch] — todo
-- priority: verification; needs: none
-- milestone: M-oracle-hardening.
-- basis: d190167170c305957c266d4cbdf828eab55c685a
-- scope: `src/rate.rs` (`check_order` and module `tests`)
-- Gap: `check_order` forms the reactant order sum as `fold(0_u64, |total, order| total.saturating_add(u64::from(order)))`. A mutant replacing `saturating_add` with `wrapping_add` was reported surviving the tests before filing (not rerun here). It is not equivalent: `2^32 + 1` orders of `u32::MAX` sum to `2^64 - 1`, and one further order 3 saturates to `u64::MAX` (an error against declared order 2) but wraps to `2` (accepted).
-- Outcome: a value-semantic test pins the saturation, with a workload that fits the committed test budget.
-- Acceptance: the test asserts `Err(RateOrderMismatch { reactant_order: u64::MAX, .. })` for declared order 2; it passes at head and `cargo mutants --file src/rate.rs` reports the `wrapping_add` mutant caught.
-- Next step: run `check_order(2, core::iter::repeat_n(u32::MAX, (1 << 32) + 1).chain([3]))` under nextest; if it exceeds the 30 s slow period, extract the per-order step as a function over `(u64, Order)` and assert `u64::MAX - 1` plus order 3 gives `u64::MAX`, an extraction and never a smaller workload.
-
 <a id="PROMETHEUS-DOCTEST-ERROR-CODES"></a>
 ## PROMETHEUS-DOCTEST-ERROR-CODES — Check the error codes of the compile_fail doctests [patch] — todo
 - priority: verification; needs: none
