@@ -6,6 +6,11 @@ All notable changes are documented here, following a keep-a-changelog shape.
 
 ### Added
 
+- `Display` and `core::error::Error` for `InvalidNetwork`,
+  `StateDimensionMismatch`, `InvalidStoichiometry`, `MisshapedMasses`,
+  `MisshapedRates`, `MisshapedEnthalpies`, `InvalidConcentration` and
+  `NonPositiveMolarMass`; each message names the broken invariant and the
+  values the error carries.
 - `rate::RateConstantDimension`: the dimensions `mol^(1-n)·m^(3n-3)·s⁻¹` of a
   mass-action rate constant of overall order `n`, with `ORDER` read from the
   amount exponent. The exponent lies in `-(2³¹-2)` to `2³¹-1`, so the order is

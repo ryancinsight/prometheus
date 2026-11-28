@@ -85,3 +85,54 @@ fn public_matrix_accepts_current_eunomia_bound() {
         .expect("invariant: positive dimensions and an empty sparse payload form a valid matrix");
     assert_eq!(client(&matrix), 2);
 }
+
+#[test]
+fn misshaped_masses_display_both_lengths() {
+    let first = MisshapedMasses {
+        n_species: 3,
+        supplied: 5,
+    };
+    let second = MisshapedMasses {
+        n_species: 7,
+        supplied: 2,
+    };
+    assert_eq!(
+        common::error_text(&first),
+        "mass balance received 5 molar masses for 3 species"
+    );
+    assert_eq!(
+        common::error_text(&second),
+        "mass balance received 2 molar masses for 7 species"
+    );
+}
+
+#[test]
+fn empty_stoichiometry_displays_its_invariant() {
+    assert_eq!(
+        common::error_text(&InvalidStoichiometry::Empty),
+        "a stoichiometric matrix needs at least one species and one reaction"
+    );
+}
+
+#[test]
+fn out_of_range_stoichiometry_displays_the_faulting_indices() {
+    let out_of_range =
+        |species, reaction, n_species, n_reactions| InvalidStoichiometry::IndexOutOfRange {
+            species,
+            reaction,
+            n_species,
+            n_reactions,
+        };
+    assert_eq!(
+        common::error_text(&out_of_range(Some(4), None, 3, 2)),
+        "entry outside the 3-species, 2-reaction matrix: species 4"
+    );
+    assert_eq!(
+        common::error_text(&out_of_range(None, Some(9), 6, 8)),
+        "entry outside the 6-species, 8-reaction matrix: reaction 9"
+    );
+    assert_eq!(
+        common::error_text(&out_of_range(Some(11), Some(12), 5, 4)),
+        "entry outside the 5-species, 4-reaction matrix: species 11, reaction 12"
+    );
+}

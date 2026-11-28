@@ -8,6 +8,7 @@
 //! reaction-system implementation.
 
 use alloc::vec::Vec;
+use core::fmt;
 
 use eunomia::RealField;
 use horae::system::{ExplicitSystem, ImplicitSystem};
@@ -56,6 +57,39 @@ pub enum InvalidNetwork {
     },
 }
 
+impl fmt::Display for InvalidNetwork {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::ReactionCountMismatch {
+                n_reactions,
+                supplied,
+            } => write!(
+                f,
+                "the reaction list has {supplied} entries but the stoichiometric matrix has {n_reactions} reactions"
+            ),
+            Self::ReactantOutOfRange {
+                reaction,
+                species,
+                n_species,
+            } => write!(
+                f,
+                "reaction {reaction} has a reactant on species {species} but the network declares {n_species} species"
+            ),
+            Self::NonFiniteRate { reaction } => {
+                write!(f, "reaction {reaction} has a non-finite rate coefficient")
+            }
+            Self::NegativeRate { reaction } => {
+                write!(f, "reaction {reaction} has a negative rate coefficient")
+            }
+            Self::OrderMismatch { reaction, mismatch } => {
+                write!(f, "reaction {reaction}: {mismatch}")
+            }
+        }
+    }
+}
+
+impl core::error::Error for InvalidNetwork {}
+
 /// A system was evaluated with state or output slices that do not match the
 /// network's species count.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -67,6 +101,22 @@ pub struct StateDimensionMismatch {
     /// Length of the derivative or Jacobian output slice supplied.
     pub output: usize,
 }
+
+impl fmt::Display for StateDimensionMismatch {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let Self {
+            n_species,
+            state,
+            output,
+        } = self;
+        write!(
+            f,
+            "network of {n_species} species received a state of length {state} and an output of length {output}"
+        )
+    }
+}
+
+impl core::error::Error for StateDimensionMismatch {}
 
 /// One reaction: its typed rate constant and its `(species, order)` reactant
 /// terms.

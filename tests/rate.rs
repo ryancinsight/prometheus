@@ -13,6 +13,8 @@
 //! (the `compile_fail` doctests of `RateConstantDimension` and
 //! `RateConstant`).
 
+pub mod common;
+
 use core::any::type_name;
 use core::fmt::Debug;
 
@@ -324,5 +326,82 @@ fn rate_order_mismatch_displays_both_orders_and_is_an_error() {
     assert_eq!(
         error.to_string(),
         "rate constant of order 1 cannot drive a reaction of order 2"
+    );
+}
+
+#[test]
+fn reaction_count_mismatch_displays_both_counts() {
+    let count = |n_reactions, supplied| InvalidNetwork::ReactionCountMismatch {
+        n_reactions,
+        supplied,
+    };
+    assert_eq!(
+        common::error_text(&count(3, 5)),
+        "the reaction list has 5 entries but the stoichiometric matrix has 3 reactions"
+    );
+    assert_eq!(
+        common::error_text(&count(7, 2)),
+        "the reaction list has 2 entries but the stoichiometric matrix has 7 reactions"
+    );
+}
+
+#[test]
+fn reactant_out_of_range_displays_reaction_species_and_count() {
+    let out_of_range = |reaction, species, n_species| InvalidNetwork::ReactantOutOfRange {
+        reaction,
+        species,
+        n_species,
+    };
+    assert_eq!(
+        common::error_text(&out_of_range(2, 9, 4)),
+        "reaction 2 has a reactant on species 9 but the network declares 4 species"
+    );
+    assert_eq!(
+        common::error_text(&out_of_range(6, 12, 8)),
+        "reaction 6 has a reactant on species 12 but the network declares 8 species"
+    );
+}
+
+#[test]
+fn non_finite_rate_displays_its_reaction() {
+    assert_eq!(
+        common::error_text(&InvalidNetwork::NonFiniteRate { reaction: 6 }),
+        "reaction 6 has a non-finite rate coefficient"
+    );
+    assert_eq!(
+        common::error_text(&InvalidNetwork::NonFiniteRate { reaction: 10 }),
+        "reaction 10 has a non-finite rate coefficient"
+    );
+}
+
+#[test]
+fn negative_rate_displays_its_reaction() {
+    assert_eq!(
+        common::error_text(&InvalidNetwork::NegativeRate { reaction: 8 }),
+        "reaction 8 has a negative rate coefficient"
+    );
+    assert_eq!(
+        common::error_text(&InvalidNetwork::NegativeRate { reaction: 13 }),
+        "reaction 13 has a negative rate coefficient"
+    );
+}
+
+#[test]
+fn order_mismatch_displays_its_reaction_and_both_orders() {
+    let order_mismatch =
+        |reaction, coefficient_order, reactant_order| InvalidNetwork::OrderMismatch {
+            reaction,
+            mismatch: RateOrderMismatch {
+                coefficient_order,
+                reactant_order,
+            },
+        };
+    assert_eq!(
+        common::error_text(&order_mismatch(5, 1, 2)),
+        "reaction 5: rate constant of order 1 cannot drive a reaction of order 2"
+    );
+    assert_eq!(
+        common::error_text(&order_mismatch(11, 3, 4)),
+        "reaction 11: rate constant of order 3 cannot drive a reaction of order 4"
     );
 }

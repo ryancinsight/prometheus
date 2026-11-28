@@ -38,6 +38,14 @@ pub struct Species<T> {
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct NonPositiveMolarMass;
 
+impl fmt::Display for NonPositiveMolarMass {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str("molar mass must be strictly positive and finite")
+    }
+}
+
+impl core::error::Error for NonPositiveMolarMass {}
+
 impl<T: RealField> Species<T> {
     /// Construct a species, rejecting a non-positive or non-finite molar mass.
     ///

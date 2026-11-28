@@ -59,3 +59,9 @@ pub fn water_formation<T: RealField>() -> (StoichiometricMatrix<T>, [MolarMass<T
 
     (matrix, [h2.molar_mass(), o2.molar_mass(), h2o.molar_mass()])
 }
+
+/// The `Display` text of an error reached through the `core::error::Error`
+/// trait object, so a missing `Error` impl is a compile error at the call site.
+pub fn error_text(error: &dyn core::error::Error) -> String {
+    error.to_string()
+}
