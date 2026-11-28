@@ -5,7 +5,9 @@
 //! fixture reachable from the crate root of a file that uses only the other
 //! one, which the dead-code pass would otherwise flag on the unused half.
 
+#[cfg(feature = "std")]
 use eunomia::RealField;
+#[cfg(feature = "std")]
 use prometheus::{MolarMass, Species, StoichiometricMatrix};
 
 /// Assert two `f64` values agree within eight ULPs of the larger magnitude.
@@ -34,6 +36,7 @@ pub fn assert_close(actual: f64, expected: f64) {
 ///
 /// Panics only if the fixture's own fixed constants were rejected, which they
 /// are not.
+#[cfg(feature = "std")]
 #[must_use]
 pub fn water_formation<T: RealField>() -> (StoichiometricMatrix<T>, [MolarMass<T>; 3]) {
     let h2 =
