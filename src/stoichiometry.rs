@@ -7,6 +7,7 @@
 //! species molar masses.
 
 use alloc::vec::Vec;
+use core::fmt;
 
 use aequitas::systems::si::quantities::ReactionRate;
 use eunomia::RealField;
@@ -54,6 +55,53 @@ pub struct MisshapedMasses {
     pub supplied: usize,
 }
 
+impl fmt::Display for MisshapedMasses {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let Self {
+            n_species,
+            supplied,
+        } = self;
+        write!(
+            f,
+            "mass balance received {supplied} molar masses for {n_species} species"
+        )
+    }
+}
+
+impl core::error::Error for MisshapedMasses {}
+
+impl fmt::Display for InvalidStoichiometry {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Empty => {
+                f.write_str("a stoichiometric matrix needs at least one species and one reaction")
+            }
+            Self::IndexOutOfRange {
+                species,
+                reaction,
+                n_species,
+                n_reactions,
+            } => {
+                write!(
+                    f,
+                    "entry outside the {n_species}-species, {n_reactions}-reaction matrix:"
+                )?;
+                let mut separator = " ";
+                if let Some(species) = species {
+                    write!(f, "{separator}species {species}")?;
+                    separator = ", ";
+                }
+                if let Some(reaction) = reaction {
+                    write!(f, "{separator}reaction {reaction}")?;
+                }
+                Ok(())
+            }
+        }
+    }
+}
+
+impl core::error::Error for InvalidStoichiometry {}
+
 /// A net-production call received a rate vector whose length does not match
 /// the matrix's reaction dimension.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -63,6 +111,21 @@ pub struct MisshapedRates {
     /// Length of the reaction-rate slice supplied by the caller.
     pub supplied: usize,
 }
+
+impl fmt::Display for MisshapedRates {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let Self {
+            n_reactions,
+            supplied,
+        } = self;
+        write!(
+            f,
+            "net production received {supplied} rates for {n_reactions} reactions"
+        )
+    }
+}
+
+impl core::error::Error for MisshapedRates {}
 
 impl<T: RealField> StoichiometricMatrix<T> {
     /// Build the matrix from `(species, reaction, coefficient)` triplets.

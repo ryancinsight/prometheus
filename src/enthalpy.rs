@@ -19,6 +19,21 @@ pub struct MisshapedEnthalpies {
     pub n_enthalpies: usize,
 }
 
+impl core::fmt::Display for MisshapedEnthalpies {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        let Self {
+            n_rates,
+            n_enthalpies,
+        } = self;
+        write!(
+            f,
+            "heat release received {n_enthalpies} enthalpies for {n_rates} rates"
+        )
+    }
+}
+
+impl core::error::Error for MisshapedEnthalpies {}
+
 /// Total volumetric heat-release rate: `q = Σⱼ rⱼ ΔHⱼ`.
 ///
 /// `rates` and `enthalpies` are parallel, one entry per reaction. The result

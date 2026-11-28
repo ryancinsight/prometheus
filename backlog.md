@@ -52,18 +52,6 @@ otherwise; an item names any command it ran.
 - Ladder rewrite, versions: `M-rate-typing`, `M-oracle-hardening` and `M-board-hygiene` all plan 0.2.0 (ADR 0003:31,42,49), while the roadmap rule plans successive minors above the latest release tag or the manifest version (`git ls-remote --tags origin` lists no tag; `Cargo.toml:6` reads `0.1.0`). Each closure files a release item for its own version, so the rewrite assigns distinct versions or merges the blocks; either is an ADR 0003 revision plus a judge.
 - Next step: dispatch a judge on `backlog.md` and ADR 0003 at the fetched default head, with this acceptance, the cases above and the exit lines as its oracle.
 
-<a id="PROMETHEUS-ERROR-TRAITS"></a>
-## PROMETHEUS-ERROR-TRAITS — Implement Display and Error for the public error types [minor] — todo
-- priority: verification; needs: none
-- milestone: M-rate-typing.
-- basis: d190167170c305957c266d4cbdf828eab55c685a
-- scope: `src/network.rs`, `src/stoichiometry.rs`, `src/concentration.rs`, `src/species.rs`, `src/enthalpy.rs`, `tests/`
-- Gap (read at basis): only `RateOrderMismatch` implements `Display` and `core::error::Error` (`src/rate.rs:62-72`); `InvalidNetwork` (`src/network.rs:22`), `StateDimensionMismatch`, `InvalidConcentration`, `NonPositiveMolarMass`, `InvalidStoichiometry`, `MisshapedMasses`, `MisshapedRates` and `MisshapedEnthalpies` implement neither. Six of the eight are structs; `InvalidConcentration` (`src/concentration.rs:20`) and `NonPositiveMolarMass` (`src/species.rs:39`) are unit structs with no value to name.
-- Outcome: each type implements both traits; `Display` names the broken invariant, and the offending values for each type that carries them.
-- Acceptance: one test per enum variant and one per struct asserts the `Display` text through a `&dyn core::error::Error` coercion, following `tests/rate.rs:317-328`; a missing impl is a compile error in that test. For each type that carries values, the test builds the error from values it chooses and asserts the text contains each of them formatted (or equals text built from those values), and a second error built from different values asserts a different text, so a message that omits a value fails; the two unit structs assert the invariant's name. Fails at basis: eight types have no impl.
-- Next step: add the impls beside each type, following `src/rate.rs:62-72`, and the tests in the target that already names each type (`tests/species.rs`, `tests/stoichiometry.rs`, `tests/production.rs`, `tests/enthalpy.rs`, `tests/rate.rs`). `StateDimensionMismatch` (`src/network.rs:62`, built at `:165,:198`) is named by no test target, so its test is new, in `tests/integration.rs` beside the `ReactionNetwork::evaluate` tests.
-- Open (ladder decision): `priority: verification` fits an additive public API gap poorly; the ladder judge sets the class.
-
 <a id="PROMETHEUS-DOCTEST-ERROR-CODES"></a>
 ## PROMETHEUS-DOCTEST-ERROR-CODES — Check the error codes of the compile_fail doctests [patch] — todo
 - priority: verification; needs: none

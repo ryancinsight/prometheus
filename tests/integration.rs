@@ -425,3 +425,27 @@ fn backward_euler_validates_robertson_stiff_trajectory() {
     assert_close(state.iter().sum(), 1.0, 1e-12);
     assert!(state.into_iter().all(|concentration| concentration >= 0.0));
 }
+
+#[test]
+fn state_dimension_mismatch_displays_species_state_and_output_lengths() {
+    let network = robertson();
+    let time = Instant::new(Time::from_base(0.0)).expect("finite fixture");
+
+    let mut derivative = [0.0_f64; 3];
+    let short_state = network
+        .evaluate(time, &[1.0, 0.0], &mut derivative)
+        .expect_err("a two-entry state does not fit three species");
+    assert_eq!(
+        common::error_text(&short_state),
+        "network of 3 species received a state of length 2 and an output of length 3"
+    );
+
+    let mut jacobian = [0.0_f64; 5];
+    let short_jacobian = network
+        .jacobian(time, &[1.0, 0.0, 0.0], &mut jacobian)
+        .expect_err("five entries do not hold a three-by-three Jacobian");
+    assert_eq!(
+        common::error_text(&short_jacobian),
+        "network of 3 species received a state of length 3 and an output of length 5"
+    );
+}

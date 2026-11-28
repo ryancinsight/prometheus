@@ -67,3 +67,19 @@ fn concentration_accepts_non_negative_and_rejects_invalid() {
         Err(InvalidConcentration)
     );
 }
+
+#[test]
+fn non_positive_molar_mass_displays_its_invariant() {
+    assert_eq!(
+        common::error_text(&NonPositiveMolarMass),
+        "molar mass must be strictly positive and finite"
+    );
+}
+
+#[test]
+fn invalid_concentration_displays_its_invariant() {
+    assert_eq!(
+        common::error_text(&InvalidConcentration),
+        "concentration must be finite and non-negative"
+    );
+}

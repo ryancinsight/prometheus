@@ -19,6 +19,14 @@ pub struct Concentration<T> {
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct InvalidConcentration;
 
+impl core::fmt::Display for InvalidConcentration {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        f.write_str("concentration must be finite and non-negative")
+    }
+}
+
+impl core::error::Error for InvalidConcentration {}
+
 impl<T: RealField> Concentration<T> {
     /// Construct a concentration, rejecting any non-finite or negative value.
     ///

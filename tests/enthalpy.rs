@@ -48,3 +48,23 @@ fn rejects_misshaped_enthalpies() {
         })
     );
 }
+
+#[test]
+fn misshaped_enthalpies_display_both_lengths() {
+    let first = MisshapedEnthalpies {
+        n_rates: 3,
+        n_enthalpies: 5,
+    };
+    let second = MisshapedEnthalpies {
+        n_rates: 7,
+        n_enthalpies: 2,
+    };
+    assert_eq!(
+        common::error_text(&first),
+        "heat release received 5 enthalpies for 3 rates"
+    );
+    assert_eq!(
+        common::error_text(&second),
+        "heat release received 2 enthalpies for 7 rates"
+    );
+}

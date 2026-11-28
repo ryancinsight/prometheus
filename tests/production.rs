@@ -68,3 +68,23 @@ fn rejects_misshaped_rate_vector() {
         })
     );
 }
+
+#[test]
+fn misshaped_rates_display_both_lengths() {
+    let first = MisshapedRates {
+        n_reactions: 3,
+        supplied: 5,
+    };
+    let second = MisshapedRates {
+        n_reactions: 7,
+        supplied: 2,
+    };
+    assert_eq!(
+        common::error_text(&first),
+        "net production received 5 rates for 3 reactions"
+    );
+    assert_eq!(
+        common::error_text(&second),
+        "net production received 2 rates for 7 reactions"
+    );
+}
