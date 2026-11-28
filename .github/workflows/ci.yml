@@ -45,6 +45,10 @@ jobs:
         run: cargo check --locked --no-default-features
       - name: Clippy
         run: cargo clippy --locked --all-targets --all-features -- -D warnings
+      # The test targets that need `std` declare `required-features`; the rest
+      # (species, enthalpy) must still compile with default features off.
+      - name: Clippy without default features
+        run: cargo clippy --locked --all-targets --no-default-features -- -D warnings
       # nextest applies the committed .config/nextest.toml budget (30s slow,
       # 60s terminate); bare `cargo test` bypasses that instrument. Doctests
       # are the one thing it does not run, hence the separate step.

@@ -52,17 +52,6 @@ otherwise; an item names any command it ran.
 - Ladder rewrite, versions: `M-rate-typing`, `M-oracle-hardening` and `M-board-hygiene` all plan 0.2.0 (ADR 0003:31,42,49), while the roadmap rule plans successive minors above the latest release tag or the manifest version (`git ls-remote --tags origin` lists no tag; `Cargo.toml:6` reads `0.1.0`). Each closure files a release item for its own version, so the rewrite assigns distinct versions or merges the blocks; either is an ADR 0003 revision plus a judge.
 - Next step: dispatch a judge on `backlog.md` and ADR 0003 at the fetched default head, with this acceptance, the cases above and the exit lines as its oracle.
 
-<a id="PROMETHEUS-NO-STD-TEST-TARGETS"></a>
-## PROMETHEUS-NO-STD-TEST-TARGETS — Build the test targets without default features [patch] — todo
-- priority: verification; needs: none
-- milestone: M-1.0 (exit evidence: tests green at all features).
-- basis: d190167170c305957c266d4cbdf828eab55c685a
-- scope: `Cargo.toml`, `tests/common/mod.rs`, `tests/rate.rs`, `tests/integration.rs`, `tests/production.rs`, `tests/stoichiometry.rs`, `.github/workflows/ci.yml`
-- Gap: CI checks `--no-default-features` for the library only (`cargo check --locked --no-default-features`) and runs clippy with `--all-features`. `cargo clippy --all-targets --no-default-features` was reported failing to compile test targets before filing and was not rerun here. Read at basis: `tests/common/mod.rs:9` imports `StoichiometricMatrix`, which `src/lib.rs` gates on `std`, and every test file but `rate.rs` includes `common`; `tests/integration.rs:11-16` and `tests/rate.rs:23-24` import the optional `horae`.
-- Outcome: the no-default-features test targets compile, and each target that needs `std` declares `required-features = ["std"]`.
-- Acceptance: `cargo clippy --locked --all-targets --no-default-features -- -D warnings` exits 0 and runs as a CI step; it fails at basis. `cargo nextest run --locked --no-default-features` still runs `tests/species.rs` and `tests/enthalpy.rs`, which use only `common::assert_close`.
-- Next step: gate `water_formation` and its imports in `tests/common/mod.rs` on `cfg(feature = "std")`, add `[[test]] required-features` for `integration`, `rate`, `production` and `stoichiometry`, then add the CI step.
-
 <a id="PROMETHEUS-ERROR-TRAITS"></a>
 ## PROMETHEUS-ERROR-TRAITS — Implement Display and Error for the public error types [minor] — todo
 - priority: verification; needs: none

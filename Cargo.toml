@@ -34,6 +34,24 @@ horae-time = { version = "0.4.0", default-features = false, optional = true }
 [dev-dependencies]
 proptest = "1.11.0"
 
+# These targets exercise stoichiometry, networks or the Horae system, all of
+# which ride `std`; with default features off they are not built.
+[[test]]
+name = "integration"
+required-features = ["std"]
+
+[[test]]
+name = "production"
+required-features = ["std"]
+
+[[test]]
+name = "rate"
+required-features = ["std"]
+
+[[test]]
+name = "stoichiometry"
+required-features = ["std"]
+
 [features]
 default = ["std"]
 # Leto is not `no_std`, so stoichiometry rides the `std` feature. Species and
